@@ -152,19 +152,43 @@ function render() {
 }
 
 /* Setlist */
+// A break between sets sits in the setlist as "break-…" (not a song). Song numbers keep counting through breaks.
+const isBreak = id => typeof id === 'string' && id.startsWith('break-');
+const inSet = id => isBreak(id) || get(id);
 function renderSet(s) {
   const list = $('setlist');
   list.replaceChildren();
-  const ids = (s?.setlist || []).filter(id => get(id));
-  $('set-count').textContent = s ? `${ids.length} song${ids.length === 1 ? '' : 's'} · ${s.name}` : '';
+  const ids = (s?.setlist || []).filter(inSet);
+  const nSongs = ids.filter(id => !isBreak(id)).length;
+  const nSets = ids.filter(isBreak).length + 1;
+  $('set-count').textContent = s ? `${nSongs} song${nSongs === 1 ? '' : 's'}${nSets > 1 ? ` in ${nSets} sets` : ''} · ${s.name}` : '';
   $('set-empty').hidden = ids.length > 0;
   list.hidden = !ids.length;
-  $('print-set-charts').disabled = !ids.length;
-  ids.forEach((id, i) => {
+  $('print-set-charts').disabled = !nSongs;
+  let n = 0;
+  ids.forEach(id => {
+    if (isBreak(id)) {
+      const li = el('li', 'break-row');
+      li.dataset.id = id;
+      li.append(el('span', 'break-label', 'Break'));
+      if (canEdit()) {
+        const rm = el('button', 'rm', '✕');
+        rm.type = 'button';
+        rm.setAttribute('aria-label', 'Remove this break');
+        rm.addEventListener('click', () => patchShow(x => { x.setlist = x.setlist.filter(v => v !== id); }));
+        const grip = el('button', 'grip', '⠿');
+        grip.type = 'button';
+        grip.setAttribute('aria-label', 'Drag to move the break');
+        grip.addEventListener('pointerdown', e => startRowDrag(e, li));
+        li.append(rm, grip);
+      }
+      list.append(li);
+      return;
+    }
     const song = get(id);
     const li = el('li');
     li.dataset.id = id;
-    li.append(el('span', 'num', i + 1));
+    li.append(el('span', 'num', ++n));
     const btn = el('button', 'song-btn');
     btn.type = 'button';
     const txt = el('span', 'song-txt');
@@ -250,7 +274,7 @@ function startRowDrag(e, li) {
     rows.forEach(r => { r.style.transform = ''; r.style.transition = ''; });
     li.classList.remove('dragging');
     if (to !== from) patchShow(x => {
-      const ids = x.setlist.filter(id => get(id));
+      const ids = x.setlist.filter(inSet);
       const [m] = ids.splice(from, 1);
       ids.splice(to, 0, m);
       x.setlist = ids;
@@ -578,6 +602,10 @@ function editSong(id) {
 }
 $('sv-edit').addEventListener('click', () => editSong(songId));
 $('song-new').addEventListener('click', () => editSong(null));
+$('break-add').addEventListener('click', () => {
+  patchShow(x => { x.setlist = [...(x.setlist || []), uid('break')]; });
+  toast('Added a break at the end of the set. Drag it to where it goes.');
+});
 $('se-cancel').addEventListener('click', () => (songId ? openSong(songId) : $('song-dlg').close()));
 $('sv-chart').addEventListener('click', () => openChart(get(songId)));
 $('se-chart').addEventListener('change', e => {
@@ -701,8 +729,12 @@ $('print-set-list').addEventListener('click', () => {
   if (!s) return;
   const box = $('print-setlist');
   box.replaceChildren(el('h1', null, `SOS Band · ${s.name}`), el('p', null, [fmtDate(s.date), s.venue].filter(Boolean).join(' · ')));
-  const ol = el('ol');
+  let ol = el('ol');
   for (const id of s.setlist || []) {
+    if (isBreak(id)) {
+      ol.append(el('li', 'brk', 'Break'));
+      continue;
+    }
     const song = get(id);
     if (!song) continue;
     const li = el('li', null, song.title);
