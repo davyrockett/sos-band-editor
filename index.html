@@ -57,7 +57,7 @@ applyTheme(savedTheme());
 </header>
 
 <div id="nokey-banner" class="banner warn-banner editor-only" hidden>
-  <span>Changes are only saved on this device. Add your access key in Settings to send them to the band app.</span>
+  <span id="nokey-text">Changes are only saved on this device. Add your access key in Settings to send them to the band app.</span>
   <button type="button" class="btn small" id="nokey-settings">Settings</button>
 </div>
 <div id="update-banner" class="banner" hidden>
@@ -313,7 +313,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v5';
+window.APP_VERSION = 'v6';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

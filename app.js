@@ -137,7 +137,11 @@ function render() {
   const b = band(), s = currentShow();
   $('band-name').textContent = EDITOR ? 'SOS Band Editor' : 'SOS Band';
   if (EDITOR) {
-    $('nokey-banner').hidden = sync.isOn();
+    const keyProblem = sync.isOn() && sync.status === 'auth';
+    $('nokey-banner').hidden = sync.isOn() && !keyProblem;
+    $('nokey-text').textContent = keyProblem
+      ? `Not saved to the band app yet. ${sync.message} Your changes are kept on this device until then.`
+      : 'Changes are only saved on this device. Add your access key in Settings to send them to the band app.';
     $('band-sees').textContent = s && s.id === b.currentShow ? '★ Band app opens on this gig' : `Band app opens on: ${get(b.currentShow)?.name || 'nothing yet'}`;
     $('band-sees').classList.toggle('warn', !s || s.id !== b.currentShow);
   }
@@ -884,7 +888,7 @@ async function github(path, options = {}, token = lsGet(K.token)) {
     throw new SyncError('offline', 'No connection. Changes are saved here and will sync when you’re back online.');
   }
   if (token && res.status === 401) throw new SyncError('auth', 'The access key isn’t working (expired or mistyped).');
-  if (token && res.status === 403) throw new SyncError('auth', 'The access key doesn’t have permission to change sos-band-data.');
+  if (token && res.status === 403) throw new SyncError('auth', 'Your access key can read but not save. On GitHub, edit the key: give it sos-band-data with Contents set to “Read and write”.');
   if (!token && (res.status === 403 || res.status === 429)) throw new SyncError('offline', 'GitHub is busy. Will try again shortly.');
   return res;
 }
@@ -943,7 +947,12 @@ const sync = {
   status: 'idle',
   message: '',
   isOn: () => Boolean(lsGet(K.token)),
-  set(status, message = '') { this.status = status; this.message = message; renderSync(); },
+  set(status, message = '') {
+    const was = this.status;
+    this.status = status; this.message = message;
+    renderSync();
+    if (EDITOR && (was === 'auth') !== (status === 'auth')) render();
+  },
   async run(first = false) {
     if (this.running) { this.again = true; return; }
     this.running = true;
