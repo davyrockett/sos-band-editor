@@ -155,19 +155,23 @@ function render() {
 // A break between sets sits in the setlist as "break-…" (not a song). Song numbers keep counting through breaks.
 const isBreak = id => typeof id === 'string' && id.startsWith('break-');
 const inSet = id => isBreak(id) || get(id);
+// Each set is its own list; on a wide screen the sets sit side by side, each break starting a new column.
 function renderSet(s) {
-  const list = $('setlist');
-  list.replaceChildren();
+  const wrap = $('setlist');
+  wrap.replaceChildren();
+  let list = el('ol', 'setlist');
   const ids = (s?.setlist || []).filter(inSet);
   const nSongs = ids.filter(id => !isBreak(id)).length;
   const nSets = ids.filter(isBreak).length + 1;
   $('set-count').textContent = s ? `${nSongs} song${nSongs === 1 ? '' : 's'}${nSets > 1 ? ` in ${nSets} sets` : ''} · ${s.name}` : '';
   $('set-empty').hidden = ids.length > 0;
-  list.hidden = !ids.length;
+  wrap.hidden = !ids.length;
   $('print-set-charts').disabled = !nSongs;
   let n = 0;
   ids.forEach(id => {
     if (isBreak(id)) {
+      if (list.children.length) wrap.append(list);
+      list = el('ol', 'setlist');
       const li = el('li', 'break-row');
       li.dataset.id = id;
       li.append(el('span', 'break-label', 'Break'));
@@ -212,6 +216,8 @@ function renderSet(s) {
     }
     list.append(li);
   });
+  if (list.children.length) wrap.append(list);
+  wrap.classList.toggle('multi', wrap.children.length > 1);
   renderLibrary(s);
 }
 function renderLibrary(s) {
@@ -241,48 +247,56 @@ function renderLibrary(s) {
 }
 $('song-search').addEventListener('input', () => renderLibrary(currentShow()));
 
-// Drag a setlist row by its handle; the new order is saved on release.
+// Drag a setlist row (song or break) by its handle, within a set or across columns.
+// The row moves in the page as you drag; the new order is saved on release.
 function startRowDrag(e, li) {
   e.preventDefault();
-  const list = $('setlist');
-  const startY = e.clientY;
-  const rows = [...list.children];
-  const centers = rows.map(r => { const b = r.getBoundingClientRect(); return b.top + b.height / 2; });
-  const h = li.getBoundingClientRect().height;
-  const from = rows.indexOf(li);
-  let to = from;
+  const wrap = $('setlist');
+  const order = () => [...wrap.querySelectorAll('li[data-id]')].map(r => r.dataset.id).join('|');
+  const before = order();
+  const r0 = li.getBoundingClientRect();
+  const offX = e.clientX - r0.left, offY = e.clientY - r0.top;
+  let px = e.clientX, py = e.clientY, scroller = 0;
   li.classList.add('dragging');
-  li.setPointerCapture?.(e.pointerId);
+  const follow = () => {
+    li.style.transform = '';
+    const r = li.getBoundingClientRect();
+    li.style.transform = `translate(${px - offX - r.left}px, ${py - offY - r.top}px)`;
+  };
+  const place = () => {
+    const lists = [...wrap.querySelectorAll('ol')];
+    // The column under the pointer (or the nearest one)
+    const dist = ol => { const b = ol.getBoundingClientRect(); return px < b.left ? b.left - px : px > b.right ? px - b.right : 0; };
+    const col = lists.reduce((a, b) => (dist(b) < dist(a) ? b : a));
+    const rows = [...col.children].filter(r => r !== li);
+    const next = rows.find(r => { const b = r.getBoundingClientRect(); return b.top + b.height / 2 > py; });
+    if (next) { if (li.nextElementSibling !== next) col.insertBefore(li, next); }
+    else if (col.lastElementChild !== li || li.parentNode !== col) col.append(li);
+    follow();
+  };
   const move = ev => {
-    const dy = ev.clientY - startY;
-    const c = centers[from] + dy;
-    to = rows.filter((r, i) => r !== li && centers[i] < c).length;
-    li.style.transform = `translateY(${dy}px)`;
-    rows.forEach((r, i) => {
-      if (r === li) return;
-      let shift = 0;
-      if (from < to && i > from && i <= to) shift = -h;
-      if (from > to && i < from && i >= to) shift = h;
-      r.style.transform = shift ? `translateY(${shift}px)` : '';
-      r.style.transition = 'transform .12s';
-    });
+    px = ev.clientX; py = ev.clientY;
+    place();
+    // Scroll the page when dragging near the top or bottom of the screen
+    clearInterval(scroller);
+    const edge = py < 110 ? -12 : py > innerHeight - 70 ? 12 : 0;
+    if (edge) scroller = setInterval(() => { scrollBy(0, edge); place(); }, 16);
   };
   const up = () => {
-    li.removeEventListener('pointermove', move);
-    li.removeEventListener('pointerup', up);
-    li.removeEventListener('pointercancel', up);
-    rows.forEach(r => { r.style.transform = ''; r.style.transition = ''; });
+    clearInterval(scroller);
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
     li.classList.remove('dragging');
-    if (to !== from) patchShow(x => {
-      const ids = x.setlist.filter(inSet);
-      const [m] = ids.splice(from, 1);
-      ids.splice(to, 0, m);
-      x.setlist = ids;
-    });
+    li.style.transform = '';
+    const after = order();
+    if (after !== before) patchShow(x => { x.setlist = after.split('|'); });
+    else renderSet(currentShow());
   };
-  li.addEventListener('pointermove', move);
-  li.addEventListener('pointerup', up);
-  li.addEventListener('pointercancel', up);
+  // Listen on the whole window: the row is moved around the page while dragging.
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
 }
 
 /* Stage plot */

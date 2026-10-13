@@ -67,7 +67,7 @@ applyTheme(savedTheme());
 
 <main>
   <!-- SETLIST -->
-  <section class="panel" id="panel-set" data-panel="set" hidden>
+  <section class="panel wide" id="panel-set" data-panel="set" hidden>
     <div class="panel-head">
       <div>
         <h2>Setlist</h2>
@@ -79,7 +79,7 @@ applyTheme(savedTheme());
       </div>
     </div>
     <p class="hint edit-only">Drag <span class="grip-ic" aria-hidden="true">⠿</span> to reorder. Tap a song to see or edit it.</p>
-    <ol class="setlist" id="setlist"></ol>
+    <div class="setcols" id="setlist"></div>
     <p class="empty" id="set-empty" hidden>No songs in this set yet.</p>
     <div class="edit-only add-row"><button type="button" class="btn small" id="break-add">+ Break</button></div>
 
@@ -314,7 +314,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v7';
+window.APP_VERSION = 'v8';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
