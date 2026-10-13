@@ -76,6 +76,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   `Resounding Joy/SOS Band/SOS Chord Charts` as a song (records keep the file name in `source`) and re-uploads a chart
   when its PDF changes. Skips whole-set PDFs (names containing the word "Set"); never deletes songs. It commits
   straight to the sos-band-data clone in `../sos-band-data`. `--check` lists changes without making them.
+- Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
 - `vendor/pdf-lib.min.js` (1.17.1) joins chart PDFs for printing.
 - Icons: `tools/make-icons.py` (dark = editor); `tools/make-icons.py band <folder>` (light = band app).

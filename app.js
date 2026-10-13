@@ -154,14 +154,27 @@ function render() {
 /* Setlist */
 // A break between sets sits in the setlist as "break-…" (not a song). Song numbers keep counting through breaks.
 const isBreak = id => typeof id === 'string' && id.startsWith('break-');
-const inSet = id => isBreak(id) || get(id);
+// A note ("Will speaks here") sits in the setlist as "note-…"; its text is in the show's setNotes.
+const isNote = id => typeof id === 'string' && id.startsWith('note-');
+const inSet = id => isBreak(id) || isNote(id) || get(id);
+function dragBits(li, label, onRemove) {
+  const rm = el('button', 'rm', '✕');
+  rm.type = 'button';
+  rm.setAttribute('aria-label', `Remove ${label}`);
+  rm.addEventListener('click', onRemove);
+  const grip = el('button', 'grip', '⠿');
+  grip.type = 'button';
+  grip.setAttribute('aria-label', `Drag to move ${label}`);
+  grip.addEventListener('pointerdown', e => startRowDrag(e, li));
+  li.append(rm, grip);
+}
 // Each set is its own list; on a wide screen the sets sit side by side, each break starting a new column.
 function renderSet(s) {
   const wrap = $('setlist');
   wrap.replaceChildren();
   let list = el('ol', 'setlist');
   const ids = (s?.setlist || []).filter(inSet);
-  const nSongs = ids.filter(id => !isBreak(id)).length;
+  const nSongs = ids.filter(id => !isBreak(id) && !isNote(id)).length;
   const nSets = ids.filter(isBreak).length + 1;
   $('set-count').textContent = s ? `${nSongs} song${nSongs === 1 ? '' : 's'}${nSets > 1 ? ` in ${nSets} sets` : ''} · ${s.name}` : '';
   $('set-empty').hidden = ids.length > 0;
@@ -185,6 +198,28 @@ function renderSet(s) {
         grip.setAttribute('aria-label', 'Drag to move the break');
         grip.addEventListener('pointerdown', e => startRowDrag(e, li));
         li.append(rm, grip);
+      }
+      list.append(li);
+      return;
+    }
+    if (isNote(id)) {
+      const li = el('li', 'note-row');
+      li.dataset.id = id;
+      const text = (s.setNotes || {})[id] || '';
+      if (canEdit()) {
+        const inp = el('input', 'note-input');
+        inp.value = text;
+        inp.placeholder = 'Type a note, e.g. Will speaks here';
+        inp.setAttribute('aria-label', 'Note text');
+        inp.addEventListener('change', () => patchShow(x => { x.setNotes = { ...(x.setNotes || {}), [id]: inp.value.trim() }; }));
+        li.append(inp);
+        dragBits(li, 'this note', () => patchShow(x => {
+          x.setlist = x.setlist.filter(v => v !== id);
+          if (x.setNotes) delete x.setNotes[id];
+        }));
+      } else {
+        if (!text) return;
+        li.append(el('span', 'note-text', text));
       }
       list.append(li);
       return;
@@ -621,6 +656,14 @@ function editSong(id) {
 }
 $('sv-edit').addEventListener('click', () => editSong(songId));
 $('song-new').addEventListener('click', () => editSong(null));
+$('note-add').addEventListener('click', () => {
+  const id = uid('note');
+  patchShow(x => { x.setlist = [...(x.setlist || []), id]; x.setNotes = { ...(x.setNotes || {}), [id]: '' }; });
+  const inp = document.querySelector(`li[data-id="${id}"] input`);
+  inp?.scrollIntoView({ block: 'center' });
+  inp?.focus();
+  toast('Added a note at the end of the set. Type it, then drag it to where it goes.');
+});
 $('break-add').addEventListener('click', () => {
   patchShow(x => { x.setlist = [...(x.setlist || []), uid('break')]; });
   toast('Added a break at the end of the set. Drag it to where it goes.');
@@ -752,6 +795,11 @@ $('print-set-list').addEventListener('click', () => {
   for (const id of s.setlist || []) {
     if (isBreak(id)) {
       ol.append(el('li', 'brk', 'Break'));
+      continue;
+    }
+    if (isNote(id)) {
+      const t = (s.setNotes || {})[id];
+      if (t) ol.append(el('li', 'pnote', t));
       continue;
     }
     const song = get(id);

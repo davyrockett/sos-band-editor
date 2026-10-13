@@ -81,7 +81,7 @@ applyTheme(savedTheme());
     <p class="hint edit-only">Drag <span class="grip-ic" aria-hidden="true">⠿</span> to reorder. Tap a song to see or edit it.</p>
     <div class="setcols" id="setlist"></div>
     <p class="empty" id="set-empty" hidden>No songs in this set yet.</p>
-    <div class="edit-only add-row"><button type="button" class="btn small" id="break-add">+ Break</button></div>
+    <div class="edit-only add-row row-btns"><button type="button" class="btn small" id="break-add">+ Break</button><button type="button" class="btn small" id="note-add">+ Note</button></div>
 
     <div class="lib-head">
       <h3>All songs</h3>
@@ -314,7 +314,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v9';
+window.APP_VERSION = 'v10';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
