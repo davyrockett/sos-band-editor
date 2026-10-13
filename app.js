@@ -217,7 +217,12 @@ function renderSet(s) {
     list.append(li);
   });
   if (list.children.length) wrap.append(list);
+  // Only widen the page when there are several sets to show side by side.
   wrap.classList.toggle('multi', wrap.children.length > 1);
+  // The page is just as wide as its columns: 620px for one set, 440px more or less per extra set (up to 4 across).
+  const sets = Math.min(wrap.children.length, 4);
+  $('panel-set').style.maxWidth = sets > 1 ? `${sets * 454 - 14}px` : '620px';
+  $('panel-set').classList.toggle('wide', sets > 2);
   renderLibrary(s);
 }
 function renderLibrary(s) {

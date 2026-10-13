@@ -60,8 +60,9 @@ html[data-mode="band"] .editor-only { display: none !important; }
 
 main { margin: 0 auto; padding: 18px 16px 80px; }
 .panel { max-width: 948px; margin: 0 auto; }
-.panel.wide { max-width: 1500px; }
-.setcols { display: grid; gap: 14px; align-items: start; margin-bottom: 12px; }
+/* The setlist lines up with the other tabs' left edge, and is centred only when 3+ sets make it wider than them */
+#panel-set:not(.wide) { margin-left: max(0px, calc((100% - 948px) / 2)); }
+.setcols { display: grid; gap: 14px; align-items: start; margin-bottom: 12px; grid-template-columns: minmax(0, 620px); }
 .setcols.multi { grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
 .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .head-btns, .row-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
