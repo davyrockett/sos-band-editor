@@ -2,7 +2,7 @@
 //
 // IMPORTANT: whenever any file below changes, bump VERSION (tools/bump.sh).
 // That is how phones and iPads learn there's an update to download.
-const VERSION = 'v3';
+const VERSION = 'v4';
 // The editor and the band app share this file; name the cache after the app's folder so they don't clear each other's.
 const NAME = new URL(self.registration.scope).pathname.split('/').filter(Boolean).pop() || 'sos';
 const CACHE = `${NAME}-${VERSION}`;
@@ -23,9 +23,13 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) =>
-      cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' })))
-    )
+    // Ask for each file with the version number on it, so GitHub's servers can't hand back a stale copy.
+    caches.open(CACHE).then((cache) => Promise.all(ASSETS.map((url) =>
+      fetch(`${url}?v=${VERSION}`, { cache: 'reload' }).then((res) => {
+        if (!res.ok) throw new Error(`${url}: ${res.status}`);
+        return cache.put(url, res);
+      })
+    )))
   );
 });
 
