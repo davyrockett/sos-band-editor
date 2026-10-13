@@ -52,7 +52,7 @@ const live = () => Object.entries(items).filter(([, r]) => r && !r.deleted);
 const ofType = t => live().filter(([, r]) => r.type === t).map(([id, r]) => ({ id, ...r }));
 const get = id => (items[id] && !items[id].deleted ? { id, ...items[id] } : null);
 const band = () => get('band') || { name: 'SOS Band', org: '', currentShow: '' };
-const members = () => ofType('member').sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+const members = () => ofType('member').sort((a, b) => a.name.localeCompare(b.name));   // A–Z
 const songs = () => ofType('song').sort((a, b) => a.title.replace(/^the /i, '').localeCompare(b.title.replace(/^the /i, '')));
 // Gigs: upcoming ones first (soonest at the top), then past ones (most recent first).
 function shows() {
