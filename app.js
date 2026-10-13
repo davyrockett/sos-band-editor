@@ -713,31 +713,22 @@ $('se-delete').addEventListener('click', () => {
 
 /* Charts: open one, or join the whole set into one PDF to print */
 const chartUrl = s => CHART_BASE + encodeURI(s.chart) + (s.chartVersion ? `?v=${s.chartVersion}` : '');
-async function openChart(s) {
+// Charts open inside the app in a full-screen viewer (pdf.js draws the pages), with Close, Download and Print.
+// Opening the PDF on its own left people stuck in the installed app with no way back.
+function openChart(s) {
   if (!s?.chart) return;
-  if (navigator.onLine) { window.open(chartUrl(s), '_blank'); return; }
-  // Offline: use the copy saved on this device, if there is one.
-  const w = window.open('', '_blank');
-  try {
-    const res = await fetch(chartUrl(s));
-    if (!res.ok) throw new Error();
-    w.location.href = URL.createObjectURL(await res.blob());
-  } catch {
-    w?.close();
-    toast('That chart isn’t saved on this device yet. Open it once while online.');
-  }
+  const got = fetch(chartUrl(s)).then(res => {
+    if (!res.ok) throw new Error('missing');
+    return res.blob();
+  });
+  showPdf(got, s.title, `${s.title}.pdf`, 'That chart isn’t saved on this device yet. Open it once while online.');
 }
-$('print-set-charts').addEventListener('click', async () => {
+$('print-set-charts').addEventListener('click', () => {
   const s = currentShow();
   const list = (s?.setlist || []).map(get).filter(x => x && x.chart);
   if (!list.length) return;
-  const btn = $('print-set-charts');
-  const w = window.open('', '_blank');
-  if (w) w.document.write('<p style="font:18px system-ui;padding:24px">Putting the charts together…</p>');
-  btn.disabled = true;
-  btn.textContent = 'Putting charts together…';
-  try {
-    await loadPdfLib();
+  const made = (async () => {
+    await loadScript('vendor/pdf-lib.min.js', 'PDFLib');
     const out = await PDFLib.PDFDocument.create();
     const missing = [];
     for (const song of list) {
@@ -749,28 +740,127 @@ $('print-set-charts').addEventListener('click', async () => {
         pages.forEach(p => out.addPage(p));
       } catch { missing.push(song.title); }
     }
-    out.setTitle(`SOS Band · ${s.name} · charts`);
-    const url = URL.createObjectURL(new Blob([await out.save()], { type: 'application/pdf' }));
-    if (w) w.location.href = url; else location.href = url;
     if (missing.length) toast(`Couldn’t get: ${missing.join(', ')}.`);
-  } catch {
-    w?.close();
-    toast('Couldn’t put the charts together. Check the connection and try again.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Print all charts';
-  }
+    out.setTitle(`SOS Band · ${s.name} · charts`);
+    return new Blob([await out.save()], { type: 'application/pdf' });
+  })();
+  showPdf(made, `${s.name}: all charts`, `SOS Band - ${s.name} - charts.pdf`, 'Couldn’t put the charts together. Check the connection and try again.');
 });
-function loadPdfLib() {
-  if (window.PDFLib) return Promise.resolve();
+
+function loadScript(src, global) {
+  if (window[global]) return Promise.resolve();
   return new Promise((ok, fail) => {
     const sc = document.createElement('script');
-    sc.src = 'vendor/pdf-lib.min.js';
+    sc.src = src;
     sc.onload = ok;
     sc.onerror = fail;
     document.head.append(sc);
   });
 }
+const viewer = { blob: null, name: '', doc: null, observer: null };
+// On a phone or iPad, the share sheet does saving and printing (Save to Files, Print, AirDrop…).
+const useShareSheet = () => matchMedia('(pointer: coarse)').matches && Boolean(navigator.canShare);
+async function showPdf(blobPromise, title, fileName, failMessage) {
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  viewer.blob = null;
+  viewer.name = fileName.replace(/[\\/:*?"<>|]/g, '-');
+  $('viewer-title').textContent = title;
+  const pages = $('viewer-pages');
+  pages.replaceChildren(el('p', 'viewer-msg', 'Loading…'));
+  const share = useShareSheet();
+  $('viewer-save').textContent = share ? 'Save / Print' : 'Download';
+  $('viewer-print').hidden = share;
+  $('viewer-save').disabled = $('viewer-print').disabled = true;
+  $('viewer').hidden = false;
+  document.body.classList.add('viewing');
+  if (history.state?.viewer !== true) history.pushState({ viewer: true }, '');
+  try {
+    const blob = await blobPromise;
+    if ($('viewer').hidden) return;
+    viewer.blob = blob;
+    $('viewer-save').disabled = $('viewer-print').disabled = false;
+    await loadScript('vendor/pdf.min.js', 'pdfjsLib');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
+    if ($('viewer').hidden) { doc.destroy(); return; }
+    viewer.doc = doc;
+    pages.replaceChildren();
+    const width = Math.min(pages.clientWidth - 16, 1000);
+    // Draw each page when it scrolls near the screen (a whole set can be 30+ pages).
+    viewer.observer = new IntersectionObserver(entries => entries.forEach(en => {
+      if (!en.isIntersecting || en.target.dataset.drawn) return;
+      en.target.dataset.drawn = '1';
+      drawPage(doc, Number(en.target.dataset.page), en.target, width);
+    }), { root: pages, rootMargin: '600px 0px' });
+    for (let i = 1; i <= doc.numPages; i++) {
+      const pg = await doc.getPage(i);
+      const vp = pg.getViewport({ scale: 1 });
+      const box = el('div', 'viewer-page');
+      box.dataset.page = i;
+      box.style.width = width + 'px';
+      box.style.aspectRatio = `${vp.width} / ${vp.height}`;
+      pages.append(box);
+      viewer.observer.observe(box);
+    }
+  } catch {
+    if (!$('viewer').hidden) pages.replaceChildren(el('p', 'viewer-msg', failMessage));
+  }
+}
+async function drawPage(doc, n, box, width) {
+  try {
+    const pg = await doc.getPage(n);
+    const scale = width / pg.getViewport({ scale: 1 }).width;
+    const vp = pg.getViewport({ scale: scale * Math.min(devicePixelRatio || 1, 2.5) });
+    const canvas = el('canvas');
+    canvas.width = vp.width;
+    canvas.height = vp.height;
+    canvas.setAttribute('aria-label', `Page ${n}`);
+    await pg.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+    box.append(canvas);
+  } catch {}
+}
+function closeViewer(fromHistory = false) {
+  if ($('viewer').hidden) return;
+  $('viewer').hidden = true;
+  document.body.classList.remove('viewing');
+  viewer.observer?.disconnect();
+  viewer.doc?.destroy();
+  viewer.doc = viewer.blob = null;
+  $('viewer-pages').replaceChildren();
+  if (!fromHistory && history.state?.viewer) history.back();
+}
+$('viewer-close').addEventListener('click', () => closeViewer());
+window.addEventListener('popstate', () => closeViewer(true));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewer(); });
+$('viewer-save').addEventListener('click', async () => {
+  if (!viewer.blob) return;
+  const file = new File([viewer.blob], viewer.name, { type: 'application/pdf' });
+  if (useShareSheet() && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: $('viewer-title').textContent }); } catch {}
+    return;
+  }
+  const a = el('a');
+  a.href = URL.createObjectURL(file);
+  a.download = viewer.name;
+  document.body.append(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+});
+$('viewer-print').addEventListener('click', () => {
+  if (!viewer.blob) return;
+  // Print the PDF itself (not the screen) from a hidden frame.
+  document.getElementById('print-frame')?.remove();
+  const f = el('iframe');
+  f.id = 'print-frame';
+  f.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;border:0;right:0;bottom:0';
+  f.src = URL.createObjectURL(viewer.blob);
+  f.onload = () => setTimeout(() => {
+    try { f.contentWindow.focus(); f.contentWindow.print(); }
+    catch { window.open(f.src, '_blank'); }
+  }, 300);
+  document.body.append(f);
+});
+
 // Save the set's charts on this device so they open at a gig with no signal.
 async function keepChartsOffline() {
   if (!navigator.onLine || !('caches' in window)) return;

@@ -79,5 +79,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   straight to the sos-band-data clone in `../sos-band-data`. `--check` lists changes without making them.
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
-- `vendor/pdf-lib.min.js` (1.17.1) joins chart PDFs for printing.
+- Charts open in an in-app full-screen viewer (Close / Download / Print; on phones one Save / Print button = share sheet),
+  drawn by `vendor/pdf.min.js` + `pdf.worker.min.js` (pdf.js 3.11.174). Opening the PDF directly left people stuck in the
+  installed app. `vendor/pdf-lib.min.js` (1.17.1) joins the set's charts for "Print all charts".
 - Icons: `tools/make-icons.py` (dark = editor); `tools/make-icons.py band <folder>` (light = band app).
