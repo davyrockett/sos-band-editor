@@ -307,14 +307,16 @@ applyTheme(savedTheme());
 
 <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-labelledby="viewer-title" hidden>
   <div class="viewer-bar">
-    <button type="button" class="btn small" id="viewer-close">✕ Close</button>
+    <button type="button" class="btn small" id="viewer-close" aria-label="Close">✕<span class="vf-label"> Close</span></button>
     <h2 id="viewer-title"></h2>
     <div class="viewer-btns">
+      <button type="button" class="btn small" id="viewer-full" aria-label="Full screen">⤢<span class="vf-label"> Full screen</span></button>
       <button type="button" class="btn small" id="viewer-save">Download</button>
       <button type="button" class="btn small primary" id="viewer-print">Print</button>
     </div>
   </div>
   <div class="viewer-pages" id="viewer-pages"></div>
+  <button type="button" class="viewer-exit" id="viewer-exit" aria-label="Leave full screen">✕</button>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -326,7 +328,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v15';
+window.APP_VERSION = 'v16';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

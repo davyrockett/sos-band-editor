@@ -819,8 +819,20 @@ async function drawPage(doc, n, box, width) {
     box.append(canvas);
   } catch {}
 }
+// Full screen: hide the bar so the chart fills the screen; a small floating ✕ brings the bar back.
+// Where the device allows it, the browser goes full screen too (not on iPhone, which doesn't allow it for pages).
+function setFull(on) {
+  $('viewer').classList.toggle('full', on);
+  const v = $('viewer');
+  if (on && v.requestFullscreen && !document.fullscreenElement) v.requestFullscreen().catch(() => {});
+  if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+$('viewer-full').addEventListener('click', () => setFull(true));
+$('viewer-exit').addEventListener('click', () => setFull(false));
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) $('viewer').classList.remove('full'); });
 function closeViewer(fromHistory = false) {
   if ($('viewer').hidden) return;
+  setFull(false);
   $('viewer').hidden = true;
   document.body.classList.remove('viewing');
   viewer.observer?.disconnect();
@@ -831,7 +843,10 @@ function closeViewer(fromHistory = false) {
 }
 $('viewer-close').addEventListener('click', () => closeViewer());
 window.addEventListener('popstate', () => closeViewer(true));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewer(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('viewer').classList.contains('full')) setFull(false); else closeViewer();
+});
 $('viewer-save').addEventListener('click', async () => {
   if (!viewer.blob) return;
   const file = new File([viewer.blob], viewer.name, { type: 'application/pdf' });
