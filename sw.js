@@ -2,7 +2,7 @@
 //
 // IMPORTANT: whenever any file below changes, bump VERSION (tools/bump.sh).
 // That is how phones and iPads learn there's an update to download.
-const VERSION = 'v2';
+const VERSION = 'v3';
 // The editor and the band app share this file; name the cache after the app's folder so they don't clear each other's.
 const NAME = new URL(self.registration.scope).pathname.split('/').filter(Boolean).pop() || 'sos';
 const CACHE = `${NAME}-${VERSION}`;
@@ -33,7 +33,8 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        keys.filter((key) => key.startsWith(`${NAME}-v`) && key !== CACHE).map((key) => caches.delete(key))
+        // Also clear 'sos-v1', left over from before the editor and band app were split.
+        keys.filter((key) => (key.startsWith(`${NAME}-v`) || /^sos-v\d+$/.test(key)) && key !== CACHE).map((key) => caches.delete(key))
       ))
       .then(() => self.clients.claim())
   );
@@ -77,11 +78,11 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== location.origin || !url.pathname.startsWith(new URL('./', self.registration.scope).pathname)) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(caches.match('./index.html').then((cached) => cached || fetch(request)));
+    event.respondWith(caches.open(CACHE).then((c) => c.match('./index.html')).then((cached) => cached || fetch(request)));
     return;
   }
 
   event.respondWith(
-    caches.match(request, { ignoreSearch: true }).then((cached) => cached || fetch(request))
+    caches.open(CACHE).then((c) => c.match(request, { ignoreSearch: true })).then((cached) => cached || fetch(request))
   );
 });
