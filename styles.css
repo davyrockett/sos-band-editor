@@ -104,7 +104,7 @@ body.editing .break-label { padding-left: 76px; }
 .chip { flex: none; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--kc, var(--line));
   color: var(--kc, var(--muted)); background: color-mix(in srgb, var(--kc, transparent) 10%, var(--surface)); white-space: nowrap; }
 .chip.none { --kc: var(--line); color: var(--muted); font-weight: 400; }
-.keytag { flex: none; font-size: 13px; color: var(--muted); min-width: 22px; text-align: center; }
+.keytag { flex: none; font-size: 14px; font-weight: 700; color: var(--muted); min-width: 24px; text-align: center; }
 .grip { flex: none; width: 40px; height: 44px; border: 0; background: none; cursor: grab; color: var(--muted); font-size: 20px; touch-action: none; }
 .rm { flex: none; width: 36px; height: 36px; border: 0; background: none; color: var(--muted); cursor: pointer; border-radius: 50%; font-size: 16px; }
 .rm:hover { background: var(--sunk); color: var(--danger); }
@@ -230,11 +230,15 @@ dialog.sheet::backdrop { background: rgba(20,18,16,.5); }
   padding: 12px 18px; border-radius: 12px; z-index: 50; max-width: calc(100vw - 32px); display: flex; gap: 14px; align-items: center; }
 
 @media (max-width: 560px) {
+  .setlist li { gap: 6px; padding: 0 2px 0 8px; }
+  .setlist .num { width: 24px; }
+  .setlist .rm { width: 30px; }
+  .setlist .grip { width: 30px; }
+  .song-btn { gap: 6px; }
   .brand h1 { font-size: 26px; }
   h2 { font-size: 26px; }
   .two { grid-template-columns: 1fr; }
   .head-btns { width: 100%; }
-  .keytag { display: none; }
 }
 
 /* Printing: only the open section, in black on white */
