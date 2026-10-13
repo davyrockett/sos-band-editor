@@ -54,10 +54,17 @@ const get = id => (items[id] && !items[id].deleted ? { id, ...items[id] } : null
 const band = () => get('band') || { name: 'SOS Band', org: '', currentShow: '' };
 const members = () => ofType('member').sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
 const songs = () => ofType('song').sort((a, b) => a.title.replace(/^the /i, '').localeCompare(b.title.replace(/^the /i, '')));
-const shows = () => ofType('show').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+// Gigs: upcoming ones first (soonest at the top), then past ones (most recent first).
+function shows() {
+  const today = new Date().toLocaleDateString('en-CA');
+  const all = ofType('show');
+  const next = all.filter(s => !s.date || s.date >= today).sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));
+  const past = all.filter(s => s.date && s.date < today).sort((a, b) => b.date.localeCompare(a.date));
+  return [...next, ...past];
+}
 function currentShow() {
-  // The band app always shows the one David marked for the band.
-  const id = (EDITOR && lsGet(K.show)) || band().currentShow;
+  // Opens on the gig David marked as main (★) until someone picks another one on their device.
+  const id = lsGet(K.show) || band().currentShow;
   return get(id) || shows()[0] || null;
 }
 
@@ -131,11 +138,11 @@ function render() {
   $('band-name').textContent = EDITOR ? 'SOS Band Editor' : 'SOS Band';
   if (EDITOR) {
     $('nokey-banner').hidden = sync.isOn();
-    $('band-sees').textContent = s && s.id === b.currentShow ? 'Band app shows this' : `Band app shows: ${get(b.currentShow)?.name || 'nothing yet'}`;
+    $('band-sees').textContent = s && s.id === b.currentShow ? '★ Band app opens on this gig' : `Band app opens on: ${get(b.currentShow)?.name || 'nothing yet'}`;
     $('band-sees').classList.toggle('warn', !s || s.id !== b.currentShow);
   }
   document.title = s ? `SOS Band · ${s.name}` : 'SOS Band';
-  $('show-name').textContent = s ? s.name : (Object.keys(items).length ? 'No show yet' : 'Loading…');
+  $('show-name').textContent = s ? s.name : (Object.keys(items).length ? 'No gig yet' : 'Loading…');
   $('show-date').textContent = s ? fmtDate(s.date, false) : '';
   renderSet(s); renderPlot(s, b); renderGear(s); renderMixers(s); renderBand(s);
 }
@@ -774,7 +781,7 @@ function openShows() {
     const b = el('button');
     b.type = 'button';
     b.setAttribute('aria-current', s.id === cur?.id);
-    b.append(el('span', null, s.name + (s.id === band().currentShow ? ' ★' : '')), el('span', 'd', fmtDate(s.date, false)));
+    b.append(el('span', null, s.name + (EDITOR && s.id === band().currentShow ? ' ★' : '')), el('span', 'd', fmtDate(s.date, false)));
     b.addEventListener('click', () => { lsSet(K.show, s.id); render(); openShows(); keepChartsOffline(); });
     li.append(b);
     ul.append(li);
@@ -786,25 +793,25 @@ function openShows() {
     $('sh-host').value = cur.host || '';
   }
   $('sh-band').disabled = !cur || cur.id === band().currentShow;
-  $('sh-band').textContent = cur && cur.id === band().currentShow ? '✓ This is the show in the band app' : 'Show this one in the band app';
+  $('sh-band').textContent = cur && cur.id === band().currentShow ? '★ The band app opens on this gig' : '★ Make the band app open on this gig';
   $('sh-delete').classList.remove('armed');
-  $('sh-delete').textContent = 'Delete show';
+  $('sh-delete').textContent = 'Delete gig';
   $('sh-delete').disabled = shows().length < 2;
   if (!$('show-dlg').open) $('show-dlg').showModal();
 }
-$('show-open').addEventListener('click', () => { if (EDITOR) openShows(); });
+$('show-open').addEventListener('click', openShows);
 $('sh-band').addEventListener('click', () => {
   const cur = currentShow();
   if (!cur) return;
   put('band', { ...band(), currentShow: cur.id });
   openShows();
-  toast(`The band app now shows ${cur.name}.`);
+  toast(`The band app now opens on ${cur.name}.`);
 });
 $('show-form').addEventListener('submit', e => {
   e.preventDefault();
   patchShow(v => { v.name = $('sh-name').value.trim() || v.name; v.date = $('sh-date').value; v.venue = $('sh-venue').value.trim(); v.host = $('sh-host').value.trim(); });
   openShows();
-  toast('Show saved.');
+  toast('Gig saved.');
 });
 $('sh-copy').addEventListener('click', () => {
   const cur = currentShow();
@@ -816,7 +823,7 @@ $('sh-copy').addEventListener('click', () => {
   openShows();
   $('sh-name').focus();
   $('sh-name').select();
-  toast('Copied the stage plot, setlist, gear and mixers. Give it a name and date. The band app still shows the old one until you switch it.');
+  toast('Copied the stage plot, setlist, gear and mixers. Give it a name and date.');
 });
 $('sh-delete').addEventListener('click', () => {
   const b = $('sh-delete'), cur = currentShow();

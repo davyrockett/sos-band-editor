@@ -32,7 +32,6 @@ h3 { font-size: 22px; }
 [hidden] { display: none !important; }
 body:not(.editing) .edit-only { display: none !important; }
 html[data-mode="band"] .editor-only { display: none !important; }
-html[data-mode="band"] .show-btn { cursor: default; }
 .band-sees { display: block; font-size: 13px; color: var(--ok); font-weight: 700; margin-top: 2px; }
 .band-sees.warn { color: var(--muted); font-weight: 400; }
 .banner.warn-banner { background: color-mix(in srgb, var(--danger) 14%, var(--bg)); }

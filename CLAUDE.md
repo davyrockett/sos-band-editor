@@ -49,10 +49,13 @@ built from this same code.
 
 Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs into one), Stage plot
 (drag people; tap one to edit them), Gear (totals from each player's gear + extras), Mixer, Band (roster, who's playing).
-The show picker holds several shows. **Show this one in the band app** chooses which show the band sees (★).
+Gigs ("shows" in the code/data): the picker in the header lists them, upcoming first. Band members can switch
+gigs too; the band app opens on the one David marks with **★ Make the band app open on this gig** (`band.currentShow`).
+At the moment: Ionis Event (Nov 4 2026), Living Your Dreams (Nov 7 2026, ★, the one being prepared) and The Midway;
+the two November gigs started as copies of the Midway info (David: "same info for now").
 
 - **One codebase, two apps.** `<html data-mode="editor">` here; the band app is the same files with
-  `data-mode="band"` (no editing, no key settings, always shows the ★ show). Anything marked `editor-only`
+  `data-mode="band"` (no editing, no key settings). Anything marked `editor-only`
   (CSS class) or gated on `EDITOR` in app.js is hidden in the band app; `edit-only` = editing controls.
   The two apps share davyrockett.github.io storage, so localStorage keys are prefixed (`sosed.` editor, `sos.` band)
   and service-worker caches are named after the folder.
@@ -69,6 +72,10 @@ The show picker holds several shows. **Show this one in the band app** chooses w
   reach the band within a minute or two. Don't edit `data.json` by hand unless David asks.
 - Starting data came from `~/Dropbox/Local/Resounding Joy/SOS Band/` (Midway 2026 stage plot, gear list, mixer
   routing of May 17, and the Midway Set 2 PDF order); song list = the `SOS Chord Charts` folder.
+- **Chart folder → app:** `tools/sync-charts.py` (or double-click `Sync SOS Charts.command`) adds every PDF in
+  `Resounding Joy/SOS Band/SOS Chord Charts` as a song (records keep the file name in `source`) and re-uploads a chart
+  when its PDF changes. Skips whole-set PDFs (names containing the word "Set"); never deletes songs. It commits
+  straight to the sos-band-data clone in `../sos-band-data`. `--check` lists changes without making them.
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
 - `vendor/pdf-lib.min.js` (1.17.1) joins chart PDFs for printing.
 - Icons: `tools/make-icons.py` (dark = editor); `tools/make-icons.py band <folder>` (light = band app).

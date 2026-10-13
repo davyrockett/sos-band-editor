@@ -39,7 +39,7 @@ applyTheme(savedTheme());
     <div class="brand">
       <h1 id="band-name">SOS Band</h1>
       <button type="button" class="show-btn" id="show-open" aria-haspopup="dialog">
-        <span id="show-name">Loading…</span><span class="show-date" id="show-date"></span><span class="chev editor-only" aria-hidden="true">▾</span>
+        <span id="show-name">Loading…</span><span class="show-date" id="show-date"></span><span class="chev" aria-hidden="true">▾</span>
       </button>
       <span class="band-sees editor-only" id="band-sees"></span>
     </div>
@@ -233,23 +233,23 @@ applyTheme(savedTheme());
 <dialog id="show-dlg" class="sheet">
   <div class="sheet-in">
     <div class="sheet-head">
-      <h2>Shows</h2>
+      <h2>Gigs</h2>
       <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
     </div>
     <ul class="shows" id="shows"></ul>
     <form id="show-form" class="edit-only show-form" autocomplete="off">
-      <h3>This show</h3>
+      <h3>This gig</h3>
       <label>Name <input id="sh-name" required></label>
       <div class="two">
         <label>Date <input type="date" id="sh-date"></label>
         <label>Venue <input id="sh-venue"></label>
       </div>
       <label>Presented by <input id="sh-host" placeholder="e.g. Resounding Joy"></label>
-      <button type="button" class="btn" id="sh-band" style="margin-top:14px">Show this one in the band app</button>
+      <button type="button" class="btn" id="sh-band" style="margin-top:14px">★ Make the band app open on this gig</button>
       <div class="row-btns spread">
-        <button type="button" class="btn danger" id="sh-delete">Delete show</button>
+        <button type="button" class="btn danger" id="sh-delete">Delete gig</button>
         <span class="row-btns">
-          <button type="button" class="btn" id="sh-copy">New show (copy of this)</button>
+          <button type="button" class="btn" id="sh-copy">New gig (copy of this)</button>
           <button type="submit" class="btn primary">Save</button>
         </span>
       </div>
@@ -313,7 +313,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v4';
+window.APP_VERSION = 'v5';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
