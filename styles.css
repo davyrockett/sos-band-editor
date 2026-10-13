@@ -174,15 +174,16 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .mixer-foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 
 /* Band */
-.members { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.members li { background: var(--surface); border: 2px solid var(--kc); border-radius: var(--r); display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; min-height: 64px; }
+.members { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.members li { background: var(--surface); border: 2px solid var(--kc); border-radius: var(--r); display: flex; flex-direction: column; align-items: stretch; padding: 6px 10px 6px; }
 .members li.off { border-style: dashed; opacity: .7; }
-.members .who { flex: 1; min-width: 0; border: 0; background: none; text-align: left; padding: 6px 0; cursor: pointer; }
+.members .who { min-width: 0; border: 0; background: none; text-align: left; padding: 2px 0; cursor: pointer; }
 body:not(.editing) .members .who { cursor: default; }
-.members .who b { display: block; font-size: 18px; }
-.members .who span { color: var(--muted); font-size: 14px; }
-.playing { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; padding: 6px; }
-.playing input { width: 22px; height: 22px; accent-color: var(--accent); }
+.members .who b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.members .who span { display: block; color: var(--muted); font-size: 13px; line-height: 1.3; }
+.members li > .cap { font-size: 12px; margin: 2px 0 0; }
+.playing { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; padding: 4px 0 0; min-height: 32px; }
+.playing input { width: 20px; height: 20px; accent-color: var(--accent); }
 
 /* Dialogs */
 dialog.sheet { border: 0; padding: 0; border-radius: 16px; background: var(--surface); color: var(--ink); width: min(560px, calc(100vw - 24px));
