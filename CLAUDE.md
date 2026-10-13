@@ -42,20 +42,33 @@ with this section (copy it from any other app) plus an "## This app" section.
 
 ## This app
 
-SOS Band: for the Sounds of Service (SOS) Band (Resounding Joy). Live: https://davyrockett.github.io/sos-band/
-Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs into one), Stage plot,
-Gear (totals worked out from each player's gear + extras), Mixer (channels per mixer), Band (roster, who's playing).
-A show picker in the header holds several shows; "New show (copy of this)" starts the next gig.
+SOS Band **Editor**: David's own app for the Sounds of Service (SOS) Band (Resounding Joy). Only David uses it
+(public, but he doesn't share the link). Live: https://davyrockett.github.io/sos-band-editor/
+The band gets a separate view-only app, **SOS Band** (repo davyrockett/sos-band, https://davyrockett.github.io/sos-band/),
+built from this same code.
 
-- **Publish:** run `tools/bump.sh` (bumps `sw.js` and index.html together), commit, push, confirm live.
-- **Test locally:** `Start SOS Band.command` (port 8770). The service worker caches files, so after editing
-  unregister it (or bump) before checking changes in the browser.
-- **Data:** everything is in the PUBLIC repo davyrockett/sos-band-data: `data.json` (`{app, format, items}`;
-  each record has `type` member/song/show/band and `updatedAt`; deletions are `{deleted:true}`; newest edit wins)
-  and `charts/*.pdf`, served by GitHub Pages at davyrockett.github.io/sos-band-data/. Anyone can view; editing
-  needs an access key pasted once per device (same "Z4 Log sync" key with sos-band-data added). Not connected = view only.
-  New charts uploaded in the app go to `charts/` in that repo. Don't edit `data.json` by hand unless David asks.
+Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs into one), Stage plot
+(drag people; tap one to edit them), Gear (totals from each player's gear + extras), Mixer, Band (roster, who's playing).
+The show picker holds several shows. **Show this one in the band app** chooses which show the band sees (★).
+
+- **One codebase, two apps.** `<html data-mode="editor">` here; the band app is the same files with
+  `data-mode="band"` (no editing, no key settings, always shows the ★ show). Anything marked `editor-only`
+  (CSS class) or gated on `EDITOR` in app.js is hidden in the band app; `edit-only` = editing controls.
+  The two apps share davyrockett.github.io storage, so localStorage keys are prefixed (`sosed.` editor, `sos.` band)
+  and service-worker caches are named after the folder.
+- **Publish:** `tools/bump.sh`, commit, push this repo, then `tools/publish-band-app.sh "what changed"` to copy
+  the code into `../sos-band`, bump its version and push it. Confirm both live sites show the new version.
+  Never edit files in the sos-band repo directly (except its README/CLAUDE.md/manifest); they get overwritten.
+- **Test locally:** serve the whole `Claude Apps` folder (e.g. `python3 -m http.server 8770` there) and open
+  /sos-band-editor/ (and /sos-band/ after copying). The service worker caches files: unregister it, or bump, to see changes.
+- **Data:** the PUBLIC repo davyrockett/sos-band-data: `data.json` (`{app, format, items}`; each record has `type`
+  member/song/show/band and `updatedAt`; deletions are `{deleted:true}`; newest edit wins; `band.currentShow` = the
+  show the band app shows) and `charts/*.pdf`, served by GitHub Pages at davyrockett.github.io/sos-band-data/.
+  The editor saves there with David's access key (same "Z4 Log sync" key with sos-band-data added). Without a key,
+  the editor still works but changes stay on that device (red banner). The band app reads the Pages copy, so changes
+  reach the band within a minute or two. Don't edit `data.json` by hand unless David asks.
 - Starting data came from `~/Dropbox/Local/Resounding Joy/SOS Band/` (Midway 2026 stage plot, gear list, mixer
   routing of May 17, and the Midway Set 2 PDF order); song list = the `SOS Chord Charts` folder.
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
 - `vendor/pdf-lib.min.js` (1.17.1) joins chart PDFs for printing.
+- Icons: `tools/make-icons.py` (dark = editor); `tools/make-icons.py band <folder>` (light = band app).

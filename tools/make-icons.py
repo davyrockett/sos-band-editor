@@ -1,10 +1,15 @@
-"""Draws the app icons into ../icons. Run: python3 tools/make-icons.py (needs Pillow)."""
+"""Draws the app icons. Needs Pillow.
+   python3 tools/make-icons.py                    -> editor icons (dark) into ../icons
+   python3 tools/make-icons.py band <folder>      -> band app icons (light) into <folder>"""
+import sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
-OUT = Path(__file__).resolve().parent.parent / "icons"
-BG = (241, 240, 236)       # warm off-white
-INK = (30, 27, 24)         # dark brown
+BAND = len(sys.argv) > 1 and sys.argv[1] == "band"
+OUT = Path(sys.argv[2]) if BAND else Path(__file__).resolve().parent.parent / "icons"
+# Band app: light; David's editor: dark, so the two are easy to tell apart on a home screen.
+BG = (241, 240, 236) if BAND else (30, 27, 24)
+INK = (30, 27, 24) if BAND else (241, 240, 236)
 ORANGE = (212, 123, 34)    # accent
 
 

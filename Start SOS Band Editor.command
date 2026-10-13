@@ -8,6 +8,6 @@ if ! lsof -i :$PORT >/dev/null 2>&1; then
   sleep 1
 fi
 open -a Safari "http://localhost:$PORT/"
-echo "SOS Band is running at http://localhost:$PORT"
+echo "SOS Band Editor is running at http://localhost:$PORT"
 echo "Close this window when you're done."
 wait

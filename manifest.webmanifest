@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "SOS Band",
-  "short_name": "SOS Band",
+  "name": "SOS Band Editor",
+  "short_name": "SOS Editor",
   "description": "Setlist, chord charts, stage plot, gear list and mixer routing for the Sounds of Service (SOS) Band.",
   "start_url": "./",
   "scope": "./",

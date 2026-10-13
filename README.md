@@ -1,21 +1,16 @@
-# SOS Band
+# SOS Band Editor
 
-The band's setlist, chord charts, stage plot, gear list and mixer routing in one place.
-Live: https://davyrockett.github.io/sos-band/ (anyone with the link can view and print).
+David's editor for the SOS Band's setlist, chord charts, stage plot, gear list and mixer routing.
+Live: https://davyrockett.github.io/sos-band-editor/ (just for David).
+The band sees everything in the view-only **SOS Band** app: https://davyrockett.github.io/sos-band/
 
-## What's in it
-- **Setlist**: the songs in order, with who sings lead. Tap a song to open its chart (PDF) and print it.
-  **Print all charts** puts the whole set's charts into one PDF, in order. **Print list** prints just the song titles.
-- **Stage plot**: who stands where and what they need. Print it (it prints landscape).
-- **Gear**: everything to bring, added up from each player's needs, plus band extras and the PA.
-- **Mixer**: what goes into each channel of each mixer.
-- **Band**: everyone in the band and who's playing this show.
-- The show name in the header switches between shows. **New show (copy of this)** starts the next gig from this one.
-
-## Editing
-Open Settings (gear icon) → Editing and paste the access key. On that device you can then drag songs to
-reorder, add songs to the set, set lead singers and keys, upload charts, drag people around the stage plot,
-edit gear and mixer channels, and add band members. Changes sync for everyone within a minute or two.
+## How it works
+- Edit anything: drag songs to reorder, add songs to the set, set lead singers and keys, upload charts,
+  drag people around the stage plot (tap someone to edit them), edit gear and mixer channels, add band members.
+- Your changes reach the band app within a minute or two, once your access key is in Settings
+  (without it, a red banner says changes are only on this device).
+- Tap the show name to switch shows, start a new one (**New show (copy of this)**), or pick
+  **Show this one in the band app**. The ★ marks the show the band sees.
 
 ## Testing on the Mac
-Double-click **Start SOS Band.command**.
+Double-click **Start SOS Band Editor.command**.

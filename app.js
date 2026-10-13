@@ -11,7 +11,12 @@
 const DATA_REPO = 'davyrockett/sos-band-data';
 const DATA_FILE = 'data.json';
 const CHART_BASE = 'https://davyrockett.github.io/sos-band-data/';
-const K = { data: 'sos.data', token: 'sos.sync-token', last: 'sos.sync-last', tab: 'sos.tab' };
+// Two apps share this code: David's editor (sos-band-editor) and the band's view-only app (sos-band).
+// tools/publish-band-app.sh copies it into the band app with data-mode="band".
+const EDITOR = document.documentElement.dataset.mode !== 'band';
+// Both apps live on davyrockett.github.io and share browser storage, so their keys must differ.
+const P = EDITOR ? 'sosed.' : 'sos.';
+const K = { data: P + 'data', token: P + 'sync-token', last: P + 'sync-last', tab: P + 'tab', show: P + 'show', theme: P + 'theme' };
 
 const KINDS = [
   { key: 'vocal', label: 'Vocalist', icon: '🎤' },
@@ -51,7 +56,8 @@ const members = () => ofType('member').sort((a, b) => (a.order ?? 0) - (b.order 
 const songs = () => ofType('song').sort((a, b) => a.title.replace(/^the /i, '').localeCompare(b.title.replace(/^the /i, '')));
 const shows = () => ofType('show').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 function currentShow() {
-  const id = lsGet('sos.show') || band().currentShow;
+  // The band app always shows the one David marked for the band.
+  const id = (EDITOR && lsGet(K.show)) || band().currentShow;
   return get(id) || shows()[0] || null;
 }
 
@@ -73,7 +79,7 @@ function patchShow(fn) {
   put(s.id, next);
 }
 
-const canEdit = () => sync.isOn();
+const canEdit = () => EDITOR;
 
 /* ---------- Tabs ---------- */
 let tab = lsGet(K.tab) || 'set';
@@ -122,7 +128,12 @@ function gearLines(m) {
 function render() {
   document.body.classList.toggle('editing', canEdit());
   const b = band(), s = currentShow();
-  $('band-name').textContent = 'SOS Band';
+  $('band-name').textContent = EDITOR ? 'SOS Band Editor' : 'SOS Band';
+  if (EDITOR) {
+    $('nokey-banner').hidden = sync.isOn();
+    $('band-sees').textContent = s && s.id === b.currentShow ? 'Band app shows this' : `Band app shows: ${get(b.currentShow)?.name || 'nothing yet'}`;
+    $('band-sees').classList.toggle('warn', !s || s.id !== b.currentShow);
+  }
   document.title = s ? `SOS Band · ${s.name}` : 'SOS Band';
   $('show-name').textContent = s ? s.name : (Object.keys(items).length ? 'No show yet' : 'Loading…');
   $('show-date').textContent = s ? fmtDate(s.date, false) : '';
@@ -291,7 +302,8 @@ function startCardDrag(e, card, memberId) {
     card.removeEventListener('pointerup', up);
     card.removeEventListener('pointercancel', up);
     card.classList.remove('dragging');
-    if (Math.abs(x - x0) + Math.abs(y - y0) > 0.3) patchShow(s => {
+    if (Math.abs(x - x0) + Math.abs(y - y0) <= 0.3) { openMember(memberId); return; }
+    patchShow(s => {
       const l = s.lineup.find(v => v.member === memberId);
       if (l) { l.x = Math.round(x * 10) / 10; l.y = Math.round(y * 10) / 10; }
     });
@@ -762,8 +774,8 @@ function openShows() {
     const b = el('button');
     b.type = 'button';
     b.setAttribute('aria-current', s.id === cur?.id);
-    b.append(el('span', null, s.name), el('span', 'd', fmtDate(s.date, false)));
-    b.addEventListener('click', () => { lsSet('sos.show', s.id); render(); openShows(); keepChartsOffline(); });
+    b.append(el('span', null, s.name + (s.id === band().currentShow ? ' ★' : '')), el('span', 'd', fmtDate(s.date, false)));
+    b.addEventListener('click', () => { lsSet(K.show, s.id); render(); openShows(); keepChartsOffline(); });
     li.append(b);
     ul.append(li);
   }
@@ -773,12 +785,21 @@ function openShows() {
     $('sh-venue').value = cur.venue || '';
     $('sh-host').value = cur.host || '';
   }
+  $('sh-band').disabled = !cur || cur.id === band().currentShow;
+  $('sh-band').textContent = cur && cur.id === band().currentShow ? '✓ This is the show in the band app' : 'Show this one in the band app';
   $('sh-delete').classList.remove('armed');
   $('sh-delete').textContent = 'Delete show';
   $('sh-delete').disabled = shows().length < 2;
   if (!$('show-dlg').open) $('show-dlg').showModal();
 }
-$('show-open').addEventListener('click', openShows);
+$('show-open').addEventListener('click', () => { if (EDITOR) openShows(); });
+$('sh-band').addEventListener('click', () => {
+  const cur = currentShow();
+  if (!cur) return;
+  put('band', { ...band(), currentShow: cur.id });
+  openShows();
+  toast(`The band app now shows ${cur.name}.`);
+});
 $('show-form').addEventListener('submit', e => {
   e.preventDefault();
   patchShow(v => { v.name = $('sh-name').value.trim() || v.name; v.date = $('sh-date').value; v.venue = $('sh-venue').value.trim(); v.host = $('sh-host').value.trim(); });
@@ -791,20 +812,19 @@ $('sh-copy').addEventListener('click', () => {
   const id = uid('show');
   const { id: _x, updatedAt, ...copy } = structuredClone(cur);
   put(id, { ...copy, name: 'New show', date: '' });
-  lsSet('sos.show', id);
-  put('band', { ...band(), currentShow: id });
+  lsSet(K.show, id);
   openShows();
   $('sh-name').focus();
   $('sh-name').select();
-  toast('Copied the stage plot, setlist, gear and mixers. Give it a name and date.');
+  toast('Copied the stage plot, setlist, gear and mixers. Give it a name and date. The band app still shows the old one until you switch it.');
 });
 $('sh-delete').addEventListener('click', () => {
   const b = $('sh-delete'), cur = currentShow();
   if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Tap again to delete'; return; }
   remove(cur.id);
-  lsSet('sos.show', null);
+  lsSet(K.show, null);
   const next = shows()[0];
-  if (next) put('band', { ...band(), currentShow: next.id });
+  if (next && band().currentShow === cur.id) put('band', { ...band(), currentShow: next.id });
   openShows();
   toast(`Deleted “${cur.name}”.`);
 });
@@ -926,14 +946,19 @@ const sync = {
       for (let attempt = 1; ; attempt++) {
         const { data, sha } = await download(on ? lsGet(K.token) : null);
         const remote = data && data.items ? data.items : null;
-        if (!on) { if (remote && canon(remote) !== canon(items)) replaceLocal(remote); break; }
-        const merged = first && remote ? { ...remote } : merge(items, remote || {});
+        if (!on) {
+          // Band app: always show the published copy. Editor with no key: only fill an empty device.
+          if (remote && (!EDITOR || !Object.keys(items).length) && canon(remote) !== canon(items)) replaceLocal(remote);
+          break;
+        }
+        const merged = merge(items, remote || {});
         if (canon(merged) !== canon(items)) replaceLocal(merged);
         if (remote && canon(merged) === canon(remote)) break;
         try { await upload({ app: 'sos-band', format: 1, items: merged }, sha); break; }
         catch (e) { if (e.kind !== 'conflict' || attempt >= 3) throw e; first = false; }
       }
       if (on) { lsSet(K.last, new Date().toISOString()); this.set('ok'); } else this.set('view');
+      if (EDITOR) render();
     } catch (e) {
       this.set(e.kind || 'other', e.message);
     } finally {
@@ -942,7 +967,7 @@ const sync = {
     }
   },
   soon() {
-    if (!this.isOn()) return;
+    if (!this.isOn()) { render(); return; }
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.run(), 1500);
   },
@@ -954,9 +979,9 @@ const sync = {
     lsSet(K.token, token);
     lsSet(K.last, null);
     render();
-    await this.run(true);
+    await this.run();
   },
-  disconnect() { lsSet(K.token, null); lsSet(K.last, null); render(); this.run(); },
+  disconnect() { lsSet(K.token, null); lsSet(K.last, null); render(); },
 };
 
 function timeAgo(iso) {
@@ -1020,7 +1045,7 @@ function markTheme() {
   document.querySelectorAll('[data-theme-v]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeV === cur));
 }
 document.querySelectorAll('[data-theme-v]').forEach(b => b.addEventListener('click', () => {
-  lsSet('sos.theme', b.dataset.themeV);
+  lsSet(K.theme, b.dataset.themeV);
   applyTheme(b.dataset.themeV);
   markTheme();
 }));
@@ -1031,6 +1056,7 @@ $('settings-open').addEventListener('click', () => {
   $('set-update').disabled = false;
   $('settings').showModal();
 });
+$('nokey-settings').addEventListener('click', () => $('settings-open').click());
 $('settings-close').addEventListener('click', () => $('settings').close());
 $('set-update').addEventListener('click', async () => {
   const ver = $('ver-line'), ub = $('set-update'), reg = window.SW_REG;
