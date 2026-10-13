@@ -991,9 +991,17 @@ async function github(path, options = {}, token = lsGet(K.token)) {
   if (!token && (res.status === 403 || res.status === 429)) throw new SyncError('offline', 'GitHub is busy. Will try again shortly.');
   return res;
 }
-// Viewers read the published copy (no GitHub rate limit); editors read through the API.
+// Viewers read without a key; editors read through the API with theirs.
 async function download(token) {
   if (!token) {
+    // Read straight from GitHub so edits show up within seconds. ("no-cache" re-checks with GitHub each time;
+    // unchanged answers don't count against GitHub's limit of 60 reads an hour.)
+    try {
+      const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${DATA_FILE}`,
+        { cache: 'no-cache', headers: { Accept: 'application/vnd.github.raw+json' } });
+      if (res.ok) return { data: await res.json(), sha: null };
+    } catch {}
+    // Backup: the published copy, which can lag a few minutes behind.
     let res;
     try { res = await fetch(`${CHART_BASE}${DATA_FILE}?t=${Date.now()}`, { cache: 'no-store' }); }
     catch { throw new SyncError('offline', 'No connection.'); }

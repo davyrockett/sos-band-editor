@@ -68,8 +68,9 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   member/song/show/band and `updatedAt`; deletions are `{deleted:true}`; newest edit wins; `band.currentShow` = the
   show the band app shows) and `charts/*.pdf`, served by GitHub Pages at davyrockett.github.io/sos-band-data/.
   The editor saves there with David's access key (same "Z4 Log sync" key with sos-band-data added). Without a key,
-  the editor still works but changes stay on that device (red banner). The band app reads the Pages copy, so changes
-  reach the band within a minute or two. Don't edit `data.json` by hand unless David asks.
+  the editor still works but changes stay on that device (red banner). The band app reads data.json straight from the GitHub API
+  (no key, `cache: 'no-cache'` so unchanged answers are free), falling back to the Pages copy, which can lag minutes
+  (each save triggers a Pages rebuild of the whole repo incl. charts; quick saves cancel each other). Don't edit `data.json` by hand unless David asks.
 - Starting data came from `~/Dropbox/Local/Resounding Joy/SOS Band/` (Midway 2026 stage plot, gear list, mixer
   routing of May 17, and the Midway Set 2 PDF order); song list = the `SOS Chord Charts` folder.
 - **Chart folder → app:** `tools/sync-charts.py` (or double-click `Sync SOS Charts.command`) adds every PDF in
