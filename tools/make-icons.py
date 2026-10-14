@@ -10,7 +10,7 @@ OUT = Path(sys.argv[2]) if BAND else Path(__file__).resolve().parent.parent / "i
 # Band app: light; David's editor: dark, so the two are easy to tell apart on a home screen.
 BG = (241, 240, 236) if BAND else (30, 27, 24)
 INK = (30, 27, 24) if BAND else (241, 240, 236)
-ORANGE = (212, 123, 34)    # accent
+ORANGE = (245, 124, 20) if BAND else (255, 148, 51)    # accent (light or dark shade, to suit the icon background)
 
 
 def draw(size: int) -> Image.Image:
