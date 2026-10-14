@@ -18,7 +18,8 @@ concrete. Likes to see things working: verify before saying "done".
   and the matching app version). Without it, installed copies on phones never update.
 - Settings (gear icon) always has **Appearance: Light / Dark / Auto** and **Check for updates**.
   Apps open in **Light** unless changed in Settings.
-- Design follows David's First Frets app: warm off-white / dark-brown palette, orange accent,
+- Design follows David's First Frets app: warm off-white / dark-brown palette, bright orange accent (#F57C14; dark mode #FF9433; David tried his logo orange #E27039, too red) and
+  davyrockett grey secondary text (#676767; dark mode #A3A3A3),
   Big Shoulders Display headings, Atkinson Hyperlegible body text, works well on a phone.
 - Data lives on the device (localStorage / IndexedDB). Apps whose data must sync between phone and Mac
   use a separate `davyrockett/<app>-data` repo (`data.json`) and an access key pasted into Settings.
