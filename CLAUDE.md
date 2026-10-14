@@ -33,6 +33,8 @@ concrete. Likes to see things working: verify before saying "done".
 - Keep screens uncluttered: show extra controls only when they're relevant.
 - Nothing should jump around: when a control doesn't apply, grey it out in place rather than hiding it, and
   reserve space for things that appear, so other controls never shift.
+- **No AI voices, ever:** no text-to-speech or synthesised singing in any app. Use written instructions on
+  screen, and instrument or synth sounds for audio.
 - Commit messages: a short, plain description of the change.
 - When renaming or moving an app, keep the old address working with a redirect repo.
 
