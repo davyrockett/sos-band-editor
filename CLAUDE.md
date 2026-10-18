@@ -10,7 +10,8 @@ concrete. Likes to see things working: verify before saying "done".
 
 **How the apps are built and hosted**
 - Public web apps on GitHub Pages under the **davyrockett** GitHub account (never an Artifact or a hosted
-  service). Live at `https://davyrockett.github.io/<repo>/`.
+  service). Live at `https://www.davyrockett.com/<repo>/` (since 2026-10-18; old
+  `davyrockett.github.io` links redirect there). The website itself is the `davyrockett.github.io` repo.
 - Each app: `index.html` (+ `app.js` / `styles.css` when bigger), `sw.js` service worker for offline use
   with an update banner, `manifest.webmanifest`, `icons/` drawn by `tools/make-icons.py`, a
   `Start <App>.command` for local testing on the Mac, and a README written for David.
