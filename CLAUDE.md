@@ -19,6 +19,10 @@ concrete. Likes to see things working: verify before saying "done".
   `ASSETS`. It carries the app's settings over when the apps move from davyrockett.github.io to
   davyrockett.com (plan: `Claude Apps/move-to-davyrockett-com.md`; master copy `Claude Apps/tools/move.js`).
   Keep it; a new app gets a copy with `data-keep` set to its own localStorage key prefix.
+- **`suite.js`** (since 2026-10-18): every app also loads `<script src="suite.js" defer></script>` (in `ASSETS` too).
+  It shows an "All apps" button when the app was opened from David's app suite (www.davyrockett.com/apps, one Home
+  Screen icon for everything; master copy `Claude Apps/tools/suite.js`). New apps get it too. If a new app syncs,
+  add it to `SYNCED` in the website's `apps/launcher.js` so the suite's one access key reaches it.
 - **Every change must bump the version** (`tools/bump.sh` where it exists, otherwise `VERSION` in `sw.js`
   and the matching app version). Without it, installed copies on phones never update.
 - Settings (gear icon) always has **Appearance: Light / Dark / Auto** and **Check for updates**.
