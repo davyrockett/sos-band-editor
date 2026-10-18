@@ -14,6 +14,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script src="move.js" data-keep="sos.,sosed." data-synced="sos.data,sosed.data"></script>
+<script src="suite.js" defer></script>
 <script>
 // Apply the saved appearance before anything draws (Light unless changed in Settings).
 function applyTheme(t) {
@@ -329,7 +330,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v18';
+window.APP_VERSION = 'v19';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

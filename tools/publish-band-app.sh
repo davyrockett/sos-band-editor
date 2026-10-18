@@ -9,7 +9,7 @@ BAND=../sos-band
 git -C "$BAND" pull -q --ff-only || true
 cur=$(grep -o "VERSION = 'v[0-9]*'" "$BAND/sw.js" 2>/dev/null | grep -o "[0-9]*" || echo 0)
 next=$((cur + 1))
-cp app.js styles.css sw.js move.js "$BAND/"
+cp app.js styles.css sw.js move.js suite.js "$BAND/"
 mkdir -p "$BAND/vendor" && cp vendor/*.js "$BAND/vendor/"
 sed -e 's/data-mode="editor"/data-mode="band"/' \
     -e 's#<title>SOS Band Editor</title>#<title>SOS Band</title>#' \
