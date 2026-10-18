@@ -46,6 +46,8 @@ concrete. Likes to see things working: verify before saying "done".
 **New apps:** create the repo under davyrockett and turn on GitHub Pages; David's Mac downloads new
 davyrockett repos into `~/Dropbox/Local/Claude Apps/` automatically. Give each new app its own CLAUDE.md
 with this section (copy it from any other app) plus an "## This app" section.
+Also add every new app to David's unlinked app list, **www.davyrockett.com/apps** (`apps/index.html` in the
+website repo, `Claude Apps/website`): icon, name and one-line description, in the right group.
 <!-- shared-preferences:end -->
 
 ## This app
