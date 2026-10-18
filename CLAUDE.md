@@ -14,6 +14,10 @@ concrete. Likes to see things working: verify before saying "done".
 - Each app: `index.html` (+ `app.js` / `styles.css` when bigger), `sw.js` service worker for offline use
   with an update banner, `manifest.webmanifest`, `icons/` drawn by `tools/make-icons.py`, a
   `Start <App>.command` for local testing on the Mac, and a README written for David.
+- **`move.js`** (since 2026-10-17): every app loads `move.js` as its first script and lists it in `sw.js`
+  `ASSETS`. It carries the app's settings over when the apps move from davyrockett.github.io to
+  davyrockett.com (plan: `Claude Apps/move-to-davyrockett-com.md`; master copy `Claude Apps/tools/move.js`).
+  Keep it; a new app gets a copy with `data-keep` set to its own localStorage key prefix.
 - **Every change must bump the version** (`tools/bump.sh` where it exists, otherwise `VERSION` in `sw.js`
   and the matching app version). Without it, installed copies on phones never update.
 - Settings (gear icon) always has **Appearance: Light / Dark / Auto** and **Check for updates**.
