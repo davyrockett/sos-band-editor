@@ -10,13 +10,17 @@
 
 const DATA_REPO = 'davyrockett/sos-band-data';
 const DATA_FILE = 'data.json';
-const CHART_BASE = 'https://davyrockett.github.io/sos-band-data/';
+// Published data and charts, on the same site as the app (works on davyrockett.github.io and davyrockett.com).
+const CHART_BASE = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'https://davyrockett.github.io/sos-band-data/'
+  : `${location.origin}/sos-band-data/`;
 // Two apps share this code: David's editor (sos-band-editor) and the band's view-only app (sos-band).
 // tools/publish-band-app.sh copies it into the band app with data-mode="band".
 const EDITOR = document.documentElement.dataset.mode !== 'band';
-// Both apps live on davyrockett.github.io and share browser storage, so their keys must differ.
+// Both apps live on the same site and share browser storage, so their keys must differ.
 const P = EDITOR ? 'sosed.' : 'sos.';
 const K = { data: P + 'data', token: P + 'sync-token', last: P + 'sync-last', tab: P + 'tab', show: P + 'show', theme: P + 'theme' };
+// The editor's link to the band app shows its address on whichever site this is.
+{ const bl = document.getElementById('band-link'); if (bl) bl.textContent = bl.href.replace(/^https?:\/\//, '').replace(/\/$/, ''); }
 
 const KINDS = [
   { key: 'vocal', label: 'Vocalist', icon: '🎤' },
