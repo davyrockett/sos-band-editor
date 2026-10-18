@@ -50,8 +50,8 @@ with this section (copy it from any other app) plus an "## This app" section.
 ## This app
 
 SOS Band **Editor**: David's own app for the Sounds of Service (SOS) Band (Resounding Joy). Only David uses it
-(public, but he doesn't share the link). Live: https://davyrockett.github.io/sos-band-editor/
-The band gets a separate view-only app, **SOS Band** (repo davyrockett/sos-band, https://davyrockett.github.io/sos-band/),
+(public, but he doesn't share the link). Live: https://www.davyrockett.com/sos-band-editor/
+The band gets a separate view-only app, **SOS Band** (repo davyrockett/sos-band, https://www.davyrockett.com/sos-band/),
 built from this same code.
 
 Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs into one), Stage plot
@@ -64,7 +64,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
 - **One codebase, two apps.** `<html data-mode="editor">` here; the band app is the same files with
   `data-mode="band"` (no editing, no key settings). Anything marked `editor-only`
   (CSS class) or gated on `EDITOR` in app.js is hidden in the band app; `edit-only` = editing controls.
-  The two apps share davyrockett.github.io storage, so localStorage keys are prefixed (`sosed.` editor, `sos.` band)
+  The two apps share www.davyrockett.com storage, so localStorage keys are prefixed (`sosed.` editor, `sos.` band)
   and service-worker caches are named after the folder.
 - **Publish:** `tools/bump.sh`, commit, push this repo, then `tools/publish-band-app.sh "what changed"` to copy
   the code into `../sos-band`, bump its version and push it. Confirm both live sites show the new version.
@@ -73,7 +73,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   /sos-band-editor/ (and /sos-band/ after copying). The service worker caches files: unregister it, or bump, to see changes.
 - **Data:** the PUBLIC repo davyrockett/sos-band-data: `data.json` (`{app, format, items}`; each record has `type`
   member/song/show/band and `updatedAt`; deletions are `{deleted:true}`; newest edit wins; `band.currentShow` = the
-  show the band app shows) and `charts/*.pdf`, served by GitHub Pages at davyrockett.github.io/sos-band-data/.
+  show the band app shows) and `charts/*.pdf`, served by GitHub Pages at www.davyrockett.com/sos-band-data/.
   The editor saves there with David's access key (same "Z4 Log sync" key with sos-band-data added). Without a key,
   the editor still works but changes stay on that device (red banner). The band app reads data.json straight from the GitHub API
   (no key, `cache: 'no-cache'` so unchanged answers are free), falling back to the Pages copy, which can lag minutes

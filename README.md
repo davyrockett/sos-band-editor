@@ -1,8 +1,8 @@
 # SOS Band Editor
 
 David's editor for the SOS Band's setlist, chord charts, stage plot, gear list and mixer routing.
-Live: https://davyrockett.github.io/sos-band-editor/ (just for David).
-The band sees everything in the view-only **SOS Band** app: https://davyrockett.github.io/sos-band/
+Live: https://www.davyrockett.com/sos-band-editor/ (just for David).
+The band sees everything in the view-only **SOS Band** app: https://www.davyrockett.com/sos-band/
 
 ## How it works
 - Edit anything: drag songs to reorder, add songs to the set, set lead singers and keys, upload charts,
