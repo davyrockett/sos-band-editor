@@ -23,6 +23,10 @@ concrete. Likes to see things working: verify before saying "done".
   It shows an "All apps" button when the app was opened from David's app suite (www.davyrockett.com/apps, one Home
   Screen icon for everything; master copy `Claude Apps/tools/suite.js`). New apps get it too. If a new app syncs,
   add it to `SYNCED` in the website's `apps/launcher.js` so the suite's one access key reaches it.
+- **`share.js`** (since 2026-10-19): Settings in every app has a **Share** section (the app's link, "Copy link",
+  and "Share…" where the device can). Load `<script src="share.js" defer></script>` (in `ASSETS` too) and add a
+  `data-share` block using the app's own classes (see `Claude Apps/tools/share.js`). First Frets has its own
+  share section with a QR code instead.
 - **Every change must bump the version** (`tools/bump.sh` where it exists, otherwise `VERSION` in `sw.js`
   and the matching app version). Without it, installed copies on phones never update.
 - Settings (gear icon) always has **Appearance: Light / Dark / Auto** and **Check for updates**.
