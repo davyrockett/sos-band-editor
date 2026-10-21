@@ -1,20 +1,24 @@
-/* suite.js: the "All apps" button for David's app suite (www.davyrockett.com/apps/).
-   When an app was opened from the suite, this adds a small round button that goes back to the
-   list of apps. Opened any other way (a student's First Frets, the band's SOS Band, a TV), nothing
+/* suite.js: the "All apps" button for David's app suite (www.davyrockett.com/apps/) and Rundown
+   (www.davyrockett.com/rundown/). When an app was opened from either, this adds a small round button
+   that goes back there (sessionStorage 'davyrockett-suite-home', set by whichever one opened it). Opened any other way (a student's First Frets, the band's SOS Band, a TV), nothing
    shows. The same file is copied into every app (master copy: Claude Apps/tools/suite.js).
    Load it with: <script src="suite.js" defer></script>, and list it in sw.js ASSETS.
    Old-style JavaScript on purpose: Memory Lane runs on TV browsers. */
 (function () {
   'use strict';
   var fromSuite = false;
-  try { fromSuite = sessionStorage.getItem('davyrockett-suite') === '1'; } catch (e) { /* blocked */ }
+  var home = '/apps/';
+  try {
+    fromSuite = sessionStorage.getItem('davyrockett-suite') === '1';
+    home = sessionStorage.getItem('davyrockett-suite-home') || home;
+  } catch (e) { /* blocked */ }
   if (!fromSuite) return;
 
   function add() {
     if (document.getElementById('suite-home')) return;
     var a = document.createElement('a');
     a.id = 'suite-home';
-    a.href = '/apps/';
+    a.href = home;
     a.setAttribute('aria-label', 'All apps');
     a.title = 'All apps';
     a.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">' +
