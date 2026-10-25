@@ -11,9 +11,9 @@ The band sees everything in the view-only **SOS Band** app: https://www.davyrock
   (without it, a red banner says changes are only on this device).
 - Tap the gig name to switch gigs, start a new one (**New gig (copy of this)**), or pick
   **★ Make the band app open on this gig**. Band members can switch gigs too; ★ is just where their app opens.
-- **Metronome** tab: type each song's tempo in the list under it (or in Edit song). Tap a song (or use ‹ ›) to load
+- **Metronome** (the metronome icon beside the gear): type each song's tempo in the list under it (or in Edit song). Tap a song (or use ‹ ›) to load
   its tempo, then **Start**. **Silent (flash)** only flashes the box, brighter on beat 1. Also: − / +, slider,
-  Tap tempo, 2 / 3 / 4 / 6 beats. The screen stays on while it runs; it stops if you leave the app.
+  Tap tempo, 2 / 3 / 4 / 6 beats. The screen stays on while it runs; it stops when you close it or leave the app.
   Band members see the tempos and can use it too. Edit song also has a **Tap tempo** button beside the tempo box.
 - **New charts:** put the PDF in Dropbox → Resounding Joy → SOS Band → SOS Chord Charts, then double-click
   **Sync SOS Charts.command**. The song appears in both apps' song lists a minute or two later; tap **+ Set**

@@ -65,7 +65,7 @@ SOS Band **Editor**: David's own app for the Sounds of Service (SOS) Band (Resou
 The band gets a separate view-only app, **SOS Band** (repo davyrockett/sos-band, https://www.davyrockett.com/sos-band/),
 built from this same code.
 
-Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs into one), Metronome, Stage plot
+Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs into one), Stage plot
 (drag people; tap one to edit them), Gear (totals from each player's gear + extras), Mixer, Band (roster, who's playing).
 - **Mixer** (since 2026-10-24) is built from who's on the stage plot: every Mic and DI Box in a player's gear needs a channel
   (amps and drum kits are listed as "not through the mixer"). Default: one 10-channel mixer; option: two 8-channel mixers,
@@ -102,7 +102,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   `Resounding Joy/SOS Band/SOS Chord Charts` as a song (records keep the file name in `source`) and re-uploads a chart
   when its PDF changes. Skips whole-set PDFs (names containing the word "Set"); never deletes songs. It commits
   straight to the sos-band-data clone in `../sos-band-data`. `--check` lists changes without making them.
-- **Metronome** (since 2026-10-25, David): its own tab. Tempo is saved on the song (`song.bpm`, 30–260), typed in the
+- **Metronome** (since 2026-10-25, David): a pop-up from the metronome icon beside the gear (David: not a section tab); closing it stops it. Tempo is saved on the song (`song.bpm`, 30–260), typed in the
   tab's list of this gig's songs (editor) or in Edit song; the band app shows them read-only. Tap a song or ‹ › to load
   its tempo. Sound | Silent (flash) (David asked for a silent mode that just flashes); beats 2/3/4/6, beat 1 accented;
   tap tempo (also beside the tempo box in Edit song, David 2026-10-25); Web Audio lookahead scheduling, flashes follow the audio clock; screen wake lock while running; stops when
@@ -113,4 +113,10 @@ the two November gigs started as copies of the Midway info (David: "same info fo
 - Charts open in an in-app full-screen viewer (Close / Download / Print; on phones one Save / Print button = share sheet),
   drawn by `vendor/pdf.min.js` + `pdf.worker.min.js` (pdf.js 3.11.174). Opening the PDF directly left people stuck in the
   installed app. `vendor/pdf-lib.min.js` (1.17.1) joins the set's charts for "Print all charts".
+- **Stage plot on phones** (2026-10-25, David: make it fit): no more sideways scrolling; when the plot is under 760px wide
+  (container query, screen only) cards show icon, name, instrument and channels only; gear lists are a tap away (band app:
+  `showPlayer()` pop-up; editor: the member editor) and on the Gear tab. Under 560px the stage is taller (10/9).
+- **Printing** (2026-10-25, David: pages came out zoomed in): the stage plot prints at most 8.4in wide so it fits one page
+  either way round (Safari ignores `@page plot { size: landscape }`); the chart viewer's Print draws each PDF page to a
+  picture (`#print-pdf`, body class `print-pdf`) sized to fit the paper, instead of printing the PDF from a hidden iframe.
 - Icons: `tools/make-icons.py` (dark = editor); `tools/make-icons.py band <folder>` (light = band app).

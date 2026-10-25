@@ -94,6 +94,7 @@ const canEdit = () => EDITOR;
 
 /* ---------- Tabs ---------- */
 let tab = lsGet(K.tab) || 'set';
+if (!document.querySelector(`.tabs [data-tab="${tab}"]`)) tab = 'set';   // e.g. the old Metronome tab
 document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; lsSet(K.tab, tab); showTab(); }));
 function showTab() {
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
@@ -375,8 +376,16 @@ function renderPlot(s, b) {
     gearLines(m).forEach(t => ul.append(el('li', null, t)));
     c.append(ul);
     if (canEdit()) c.addEventListener('pointerdown', e => startCardDrag(e, c, m.id));
+    else c.addEventListener('click', () => showPlayer(m, chs[m.id]));
     stage.append(c);
   }
+}
+// Band app: tapping someone on the plot shows their gear (on phones the cards are too small to list it).
+function showPlayer(m, ch) {
+  $('who-name').textContent = m.name;
+  $('who-inst').textContent = [m.instrument, ch && `Mixer: ${ch}`].filter(Boolean).join(' · ');
+  $('who-gear').replaceChildren(...gearLines(m).map(t => el('li', null, t)));
+  $('who-dlg').showModal();
 }
 function startCardDrag(e, card, memberId) {
   e.preventDefault();
@@ -1001,19 +1010,44 @@ $('viewer-save').addEventListener('click', async () => {
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 });
-$('viewer-print').addEventListener('click', () => {
-  if (!viewer.blob) return;
-  // Print the PDF itself (not the screen) from a hidden frame.
-  document.getElementById('print-frame')?.remove();
-  const f = el('iframe');
-  f.id = 'print-frame';
-  f.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;border:0;right:0;bottom:0';
-  f.src = URL.createObjectURL(viewer.blob);
-  f.onload = () => setTimeout(() => {
-    try { f.contentWindow.focus(); f.contentWindow.print(); }
-    catch { window.open(f.src, '_blank'); }
-  }, 300);
-  document.body.append(f);
+// Print: each page is drawn as a picture sized to fit the paper, then the browser prints those.
+// (Printing the PDF from a hidden frame came out zoomed in and cut off, at least in Safari.)
+$('viewer-print').addEventListener('click', async () => {
+  const doc = viewer.doc, btn = $('viewer-print');
+  if (!doc) return;
+  btn.disabled = true;
+  btn.textContent = 'Preparing…';
+  const box = $('print-pdf');
+  box.replaceChildren();
+  try {
+    for (let i = 1; i <= doc.numPages; i++) {
+      const pg = await doc.getPage(i);
+      const vp = pg.getViewport({ scale: 1600 / pg.getViewport({ scale: 1 }).width });
+      const canvas = el('canvas');
+      canvas.width = vp.width;
+      canvas.height = vp.height;
+      await pg.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      const blob = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
+      const img = el('img');
+      img.src = URL.createObjectURL(blob);
+      img.alt = `Page ${i}`;
+      box.append(img);
+    }
+    await Promise.all([...box.querySelectorAll('img')].map(img => img.decode().catch(() => {})));
+    document.body.classList.add('print-pdf');
+    window.print();
+  } catch {
+    toast('Couldn’t get the pages ready to print. Try Download, then print the file.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Print';
+  }
+});
+window.addEventListener('afterprint', () => {
+  if (!document.body.classList.contains('print-pdf')) return;
+  document.body.classList.remove('print-pdf');
+  $('print-pdf').querySelectorAll('img').forEach(img => URL.revokeObjectURL(img.src));
+  $('print-pdf').replaceChildren();
 });
 
 // Save the set's charts on this device so they open at a gig with no signal.
@@ -1371,6 +1405,8 @@ function tapTempo(btn, onBpm) {
 }
 tapTempo($('met-tap'), setBpm);
 tapTempo($('se-tap'), bpm => { $('se-bpm').value = bpm; });
+$('met-open').addEventListener('click', () => { metMarks(); $('met-dlg').showModal(); });
+$('met-dlg').addEventListener('close', () => { if (metOn) metStop(); });
 // Leaving the app stops it, so it never keeps clicking in a pocket.
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && metOn) metStop(); });
 metMarks();

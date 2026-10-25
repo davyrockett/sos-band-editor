@@ -117,7 +117,9 @@ body.editing .break-label { padding-left: 76px; }
 .add { flex: none; min-width: 64px; }
 
 /* Metronome */
-#panel-met { max-width: 620px; margin-left: max(0px, calc((100% - 948px) / 2)); }
+.top-icons { display: flex; gap: 2px; flex: none; }
+.seg.met-mode { display: flex; margin: 4px 0 12px; }
+.met-mode button { flex: 1; }
 .met-box { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 12px 12px 18px; text-align: center; }
 .met-box.flash { animation: met-flash .18s ease-out; }
 .met-box.flash1 { animation: met-flash1 .22s ease-out; }
@@ -160,13 +162,11 @@ body.editing .break-label { padding-left: 76px; }
   .met-bpm { font-size: 96px; }
   .met-row .seg button { padding: 8px 12px; }
   .met-start { flex: 1 0 100%; margin-left: 0; }
-  #panel-met .panel-head .seg { width: 100%; }
-  #panel-met .panel-head .seg button { flex: 1; }
 }
 
 /* Stage plot: drawn on a fixed shape that scales with its width */
 .plot-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px 8px; }
-.plot { min-width: 900px; page: plot; container-type: inline-size; background: var(--surface); border: 2px solid var(--ink); border-radius: 4px; padding: 2.4cqw 3cqw 3cqw; }
+.plot { min-width: 0; page: plot; container-type: inline-size; background: var(--surface); border: 2px solid var(--ink); border-radius: 4px; padding: 2.4cqw 3cqw 3cqw; }
 .plot-title { text-align: center; }
 .plot-h { font-size: 3.4cqw; text-transform: uppercase; }
 .plot-sub { color: var(--muted); font-size: 1.8cqw; margin: .6cqw 0 1.4cqw; }
@@ -231,6 +231,30 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .mix-msg { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; margin: 0 0 10px; font-size: 15px; }
 .mix-msg.warn { border-color: var(--danger); color: var(--danger); font-weight: 700; }
 .pcard .chs { font-weight: 700; font-size: 1.1cqw; color: var(--accent-ink); margin: -.2cqw 0 .5cqw; }
+/* Narrow plots (phones): the plot fits the screen; cards show who and where, the gear list is a tap away (and on the Gear tab) */
+/* (Screen only: printing always shows the full cards.) */
+@media screen {
+@container (max-width: 760px) {
+  .plot-h { font-size: 20px; }
+  .plot-sub { font-size: 13px; margin: 4px 0 10px; }
+  .legend { font-size: 12px; gap: 4px 12px; margin-bottom: 14px; }
+  .legend span { gap: 5px; }
+  .legend i { width: 11px; height: 11px; }
+  .stage { border-width: 2px; border-radius: 8px; }
+  .stage-label { font-size: 9px; letter-spacing: .2em; padding: 0 6px; }
+  .stage-label.up { top: -7px; }
+  .stage-label.down { bottom: 4px; }
+  .pcard { width: 17%; border-width: 2px; border-radius: 7px; padding: 4px 2px 5px; cursor: pointer; }
+  .pcard .ic { font-size: 12px; }
+  .pcard .nm { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pcard .in { font-size: 8px; letter-spacing: .02em; margin: 1px 0 0; line-height: 1.2; }
+  .pcard .chs { font-size: 9px; margin: 2px 0 0; }
+  .pcard ul { display: none; }
+}
+@container (max-width: 560px) { .stage { aspect-ratio: 10 / 9; } }
+}
+@media (max-width: 560px) { .plot { padding: 12px 10px 14px; border-width: 1.5px; } }
+.who-gear { margin: 0; padding-left: 1.2em; line-height: 1.6; }
 
 /* Band */
 .members { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
@@ -329,11 +353,17 @@ body.viewing { overflow: hidden; }
   .print-only { display: block; }
   .print-title { margin-bottom: 10px; }
   .plot-scroll { overflow: visible; margin: 0; padding: 0; }
-  .plot { min-width: 0; break-inside: avoid; }
+  /* Small enough to fit one page either way round (Safari ignores the landscape setting) */
+  .plot { min-width: 0; break-inside: avoid; width: 8.4in; max-width: 100%; margin: 0 auto; }
+  .band-foot { display: none; }
   .gear-table th { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pcard, .legend i, .chip, .ch, .mixer li select { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body.print-list main { display: none; }
   body:not(.print-list) #print-setlist { display: none; }
+  body:not(.print-pdf) #print-pdf { display: none; }
+  body.print-pdf > :not(#print-pdf) { display: none !important; }
+  #print-pdf img { display: block; max-width: 100%; max-height: 9.8in; margin: 0 auto; break-after: page; }
+  #print-pdf img:last-child { break-after: auto; }
   #print-setlist h1 { font-size: 30pt; text-transform: uppercase; }
   #print-setlist p { margin: 2px 0 14px; color: #444; }
   #print-setlist ol { margin: 0; padding-left: 1.6em; font-size: 20pt; line-height: 1.55; }
