@@ -83,7 +83,8 @@ applyTheme(savedTheme());
       </div>
       <div class="head-btns">
         <button type="button" class="btn" id="print-set-list">Print list</button>
-        <button type="button" class="btn primary" id="print-set-charts">Print all charts</button>
+        <button type="button" class="btn" id="print-set-charts">Print all charts</button>
+        <button type="button" class="btn primary" id="perform-open">Perform</button>
       </div>
     </div>
     <p class="hint edit-only">Drag <span class="grip-ic" aria-hidden="true">⠿</span> to reorder. Tap a song to see or edit it.</p>
@@ -401,6 +402,34 @@ applyTheme(savedTheme());
   <button type="button" class="viewer-exit" id="viewer-exit" aria-label="Leave full screen">✕</button>
 </div>
 
+<!-- Perform: the set's charts full screen, one page at a time. Tap the right side for the next page, the left for the one before. -->
+<div class="perform" id="perform" role="dialog" aria-modal="true" aria-label="Perform" hidden>
+  <div class="pf-stage" id="pf-stage">
+    <div class="pf-page" id="pf-page"></div>
+    <p class="pf-msg" id="pf-msg"></p>
+  </div>
+  <div class="pf-bar" id="pf-bar">
+    <button type="button" class="btn small" id="pf-close">✕ Close</button>
+    <select id="pf-song" aria-label="Go to song"></select>
+    <span class="pf-count" id="pf-count"></span>
+    <button type="button" class="pf-icon" id="pf-met-open" aria-label="Metronome"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M9.2 3h5.6l4.2 18H5L9.2 3Z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 17 17.5 6.5M7.5 14.5h9"/></svg></button>
+  </div>
+  <div class="pf-met" id="pf-met" hidden>
+    <div class="pf-met-top">
+      <span class="pf-bpm"><b id="pf-bpm">120</b> BPM</span>
+      <button type="button" class="pf-x" id="pf-met-close" aria-label="Close the metronome">✕</button>
+    </div>
+    <p class="pf-met-song" id="pf-met-song"></p>
+    <div class="pf-met-row">
+      <button type="button" class="btn small" id="pf-minus" aria-label="Slower">−</button>
+      <button type="button" class="btn small" id="pf-plus" aria-label="Faster">+</button>
+      <button type="button" class="btn small" id="pf-tap">Tap</button>
+      <button type="button" class="btn small" id="pf-silent" aria-pressed="false">Silent</button>
+    </div>
+    <button type="button" class="btn primary" id="pf-start">Start</button>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <!-- Printed by "Print list" -->
@@ -412,7 +441,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v31';
+window.APP_VERSION = 'v32';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

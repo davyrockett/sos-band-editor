@@ -1284,10 +1284,11 @@ function metDraw() {
   let hit = null;
   while (metQueue.length && metQueue[0].t <= metCtx.currentTime) hit = metQueue.shift();
   if (hit) {
-    const box = $('met-box');
-    box.classList.remove('flash', 'flash1');
-    void box.offsetWidth;   // restart the flash animation
-    box.classList.add(hit.beat === 0 && met.beats > 1 ? 'flash1' : 'flash');
+    for (const box of [$('met-box'), $('pf-met')]) {
+      box.classList.remove('flash', 'flash1');
+      void box.offsetWidth;   // restart the flash animation
+      box.classList.add(hit.beat === 0 && met.beats > 1 ? 'flash1' : 'flash');
+    }
     $('met-dots').querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i === hit.beat));
   }
   requestAnimationFrame(metDraw);
@@ -1312,6 +1313,7 @@ function metStop() {
   metLock?.release().catch(() => {});
   metLock = null;
   $('met-box').classList.remove('flash', 'flash1');
+  $('pf-met').classList.remove('flash', 'flash1');
   $('met-dots').querySelectorAll('i').forEach(d => d.classList.remove('on'));
   metMarks();
 }
@@ -1328,6 +1330,10 @@ function metMarks() {
   $('met-slider').value = met.bpm;
   $('met-start').textContent = metOn ? 'Stop' : 'Start';
   $('met-start').classList.toggle('on', metOn);
+  $('pf-bpm').textContent = met.bpm;
+  $('pf-start').textContent = metOn ? 'Stop' : 'Start';
+  $('pf-start').classList.toggle('on', metOn);
+  $('pf-silent').setAttribute('aria-pressed', met.silent);
   document.querySelectorAll('#met-mode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.silent === '1') === String(met.silent)));
   document.querySelectorAll('#met-beats button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.beats) === met.beats));
   const dots = $('met-dots');
@@ -1440,6 +1446,153 @@ $('met-open').addEventListener('click', () => {
 // Leaving the app stops it, so it never keeps clicking in a pocket.
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && metOn) metStop(); });
 metMarks();
+
+/* ---------- Perform ----------
+   The set's charts full screen, one page at a time: tap the right side for the next page, the left side for the one
+   before (straight on into the next song), the middle for the bar (Close, pick a song, metronome). Arrow keys and
+   page-turner pedals work too. The screen stays on, and the little metronome follows the song on screen. */
+const pf = { songs: [], i: 0, page: 1, docs: new Map(), cache: new Map(), lock: null, token: 0, barTimer: null };
+function pfDoc(song) {
+  if (!song?.chart) return Promise.resolve(null);
+  if (!pf.docs.has(song.id)) pf.docs.set(song.id, (async () => {
+    await loadScript('vendor/pdf.min.js', 'pdfjsLib');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+    const res = await fetch(chartUrl(song));
+    if (!res.ok) throw new Error('missing');
+    return pdfjsLib.getDocument({ data: new Uint8Array(await res.arrayBuffer()) }).promise;
+  })().catch(() => { pf.docs.delete(song.id); return 'failed'; }));
+  return pf.docs.get(song.id);
+}
+// One page drawn as big as fits the screen (sharp on Retina screens). Kept for a moment so turning back is instant.
+async function pfDraw(doc, n, key) {
+  const box = $('pf-stage'), W = box.clientWidth, H = box.clientHeight, k = `${key}:${n}:${W}x${H}`;
+  if (pf.cache.has(k)) return pf.cache.get(k);
+  const job = (async () => {
+    const pg = await doc.getPage(n);
+    const one = pg.getViewport({ scale: 1 });
+    const fit = Math.min(W / one.width, H / one.height);
+    const vp = pg.getViewport({ scale: fit * Math.min(devicePixelRatio || 1, 2.5) });
+    const c = el('canvas');
+    c.width = vp.width; c.height = vp.height;
+    c.style.width = `${Math.floor(one.width * fit)}px`; c.style.height = `${Math.floor(one.height * fit)}px`;
+    await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    return c;
+  })();
+  pf.cache.set(k, job);
+  while (pf.cache.size > 8) pf.cache.delete(pf.cache.keys().next().value);
+  return job;
+}
+async function pfShow() {
+  const t = ++pf.token, song = pf.songs[pf.i];
+  $('pf-song').value = song.id;
+  if (met.song !== song.id) pickSong(song.id);
+  $('pf-met-song').textContent = song.bpm ? song.title : `${song.title}: no tempo saved`;
+  const doc = await pfDoc(song);
+  if (t !== pf.token) return;
+  const msg = $('pf-msg'), page = $('pf-page');
+  if (!doc || doc === 'failed') {
+    pf.page = 1;
+    page.replaceChildren();
+    msg.replaceChildren(el('b', null, song.title), el('span', null, [song.key && `Key ${song.key}`, song.bpm && `${song.bpm} BPM`].filter(Boolean).join(' · ')),
+      el('span', 'pf-dim', doc ? 'Couldn’t load this chart. Check the connection.' : 'No chart for this song.'));
+    msg.hidden = false;
+    $('pf-count').textContent = `Song ${pf.i + 1} of ${pf.songs.length}`;
+    return;
+  }
+  if (pf.page < 1 || pf.page > doc.numPages) pf.page = pf.page < 1 ? doc.numPages : 1;   // -1 = its last page
+  $('pf-count').textContent = `Song ${pf.i + 1} of ${pf.songs.length} · page ${pf.page} of ${doc.numPages}`;
+  try {
+    const c = await pfDraw(doc, pf.page, song.id);
+    if (t !== pf.token) return;
+    msg.hidden = true;
+    page.replaceChildren(c);
+  } catch { if (t === pf.token) { msg.replaceChildren(el('b', null, song.title), el('span', 'pf-dim', 'Couldn’t show this page.')); msg.hidden = false; } }
+  // Get the next page (or the next song's first) ready in the background.
+  const nextSong = pf.songs[pf.i + 1];
+  if (pf.page < doc.numPages) pfDraw(doc, pf.page + 1, song.id).catch(() => {});
+  else if (nextSong) pfDoc(nextSong).then(d => d && d !== 'failed' && pfDraw(d, 1, nextSong.id)).catch(() => {});
+}
+async function pfStep(d) {
+  const doc = await pfDoc(pf.songs[pf.i]);
+  const pages = doc && doc !== 'failed' ? doc.numPages : 1;
+  if (d > 0) {
+    if (pf.page < pages) pf.page++;
+    else if (pf.i < pf.songs.length - 1) { pf.i++; pf.page = 1; }
+    else { toast('That’s the end of the set.'); return; }
+  } else {
+    if (pf.page > 1) pf.page--;
+    else if (pf.i > 0) { pf.i--; pf.page = -1; }
+    else return;
+  }
+  pfShow();
+}
+function pfBar(show) {
+  clearTimeout(pf.barTimer);
+  $('pf-bar').classList.toggle('show', show);
+}
+async function pfWake() {
+  try { pf.lock = await navigator.wakeLock?.request('screen'); } catch {}
+}
+function openPerform() {
+  pf.songs = metSongs(currentShow());
+  if (!pf.songs.length) { toast('No songs in this set yet.'); return; }
+  const sel = $('pf-song');
+  sel.replaceChildren(...pf.songs.map((x, n) => new Option(`${n + 1}. ${x.title}${x.bpm ? ` · ${x.bpm}` : ''}`, x.id)));
+  pf.i = 0; pf.page = 1; pf.cache.clear();
+  const v = $('perform');
+  v.hidden = false;
+  document.body.classList.add('viewing');
+  (v.requestFullscreen || v.webkitRequestFullscreen)?.call(v)?.catch?.(() => {});
+  if (history.state?.perform !== true) history.pushState({ perform: true }, '');
+  pfWake();
+  pfShow();
+  pfBar(true);
+  pf.barTimer = setTimeout(() => pfBar(false), 3500);
+}
+function closePerform(fromHistory = false) {
+  if ($('perform').hidden) return;
+  $('perform').hidden = true;
+  $('pf-met').hidden = true;
+  document.body.classList.remove('viewing');
+  if (metOn) metStop();
+  pf.lock?.release().catch(() => {});
+  pf.lock = null;
+  pf.token++;
+  pf.cache.clear();
+  $('pf-page').replaceChildren();
+  if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
+  if (!fromHistory && history.state?.perform) history.back();
+}
+$('perform-open').addEventListener('click', openPerform);
+$('pf-close').addEventListener('click', () => closePerform());
+window.addEventListener('popstate', () => closePerform(true));
+$('pf-stage').addEventListener('click', e => {
+  const x = e.clientX / $('pf-stage').clientWidth;
+  if (x < 0.35) pfStep(-1);
+  else if (x > 0.65) pfStep(1);
+  else pfBar(!$('pf-bar').classList.contains('show'));
+});
+$('pf-song').addEventListener('change', e => {
+  pf.i = Math.max(0, pf.songs.findIndex(x => x.id === e.target.value));
+  pf.page = 1;
+  pfShow();
+});
+document.addEventListener('keydown', e => {
+  if ($('perform').hidden || e.target.closest?.('select, input') || (e.key === ' ' && e.target.closest?.('button'))) return;
+  if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); pfStep(1); }
+  else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); pfStep(-1); }
+  else if (e.key === 'Escape') closePerform();
+});
+window.addEventListener('resize', () => { if (!$('perform').hidden) { pf.cache.clear(); pfShow(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !$('perform').hidden) pfWake(); });
+// The little metronome in the corner: the song's tempo is already set, so Start counts it in.
+$('pf-met-open').addEventListener('click', () => { metMarks(); $('pf-met').hidden = !$('pf-met').hidden; });
+$('pf-met-close').addEventListener('click', () => { $('pf-met').hidden = true; if (metOn) metStop(); });
+$('pf-minus').addEventListener('click', () => setBpm(met.bpm - 1));
+$('pf-plus').addEventListener('click', () => setBpm(met.bpm + 1));
+$('pf-silent').addEventListener('click', () => { met.silent = !met.silent; saveMet(); metMarks(); });
+$('pf-start').addEventListener('click', () => (metOn ? metStop() : metStart()));
+tapTempo($('pf-tap'), setBpm);
 
 /* ---------- Toast ---------- */
 let toastTimer;

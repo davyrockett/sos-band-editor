@@ -397,3 +397,38 @@ body.viewing { overflow: hidden; }
   #print-setlist .pnote { display: block; font-style: italic; font-size: 14pt; margin: 4px 0 4px -1.6em; padding-left: 1.6em; }
   #print-setlist li small { font-size: 12pt; color: #444; margin-left: 10px; }
 }
+
+/* Perform: charts full screen on a dark background; the bar and the little metronome float over the page */
+.perform { position: fixed; inset: 0; z-index: 70; background: #1A1714; color: #F0EBE3; user-select: none; -webkit-user-select: none; }
+.pf-stage { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  display: grid; place-items: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.pf-page { display: grid; place-items: center; }
+.pf-page canvas { display: block; background: #fff; }
+.pf-msg { margin: 0; display: grid; gap: 8px; text-align: center; font-size: 20px; padding: 20px; }
+.pf-msg b { font-family: var(--f-display); font-size: 44px; line-height: 1.05; }
+.pf-dim { color: #A3A3A3; font-size: 17px; }
+.pf-bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: max(10px, env(safe-area-inset-top)) 12px 10px; background: rgba(26, 23, 20, .92); color: #F0EBE3;
+  transform: translateY(-110%); transition: transform .2s ease; }
+.pf-bar.show { transform: none; }
+.pf-bar .btn { background: #2A2520; border-color: #3B342D; color: #F0EBE3; }
+.pf-bar select { min-height: 40px; max-width: min(360px, 50vw); border: 1px solid #3B342D; border-radius: 999px; padding: 4px 14px; background: #2A2520; color: #F0EBE3; font-weight: 700; }
+.pf-count { flex: 1; min-width: 0; color: #A3A3A3; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-icon { width: 44px; height: 44px; border-radius: 50%; border: 1px solid #3B342D; background: #2A2520; color: #FF9433; display: grid; place-items: center; cursor: pointer; }
+.pf-met { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); width: 210px;
+  background: var(--surface); color: var(--ink); border: 2px solid var(--line); border-radius: 14px; padding: 8px 10px 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45); display: grid; gap: 8px; }
+.pf-met.flash { animation: met-flash .18s ease-out; }
+.pf-met.flash1 { animation: met-flash1 .22s ease-out; }
+.pf-met-top { display: flex; align-items: center; justify-content: space-between; }
+.pf-bpm { color: var(--muted); font-weight: 700; }
+.pf-bpm b { font-family: var(--f-display); font-size: 44px; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pf-met.flash1 .pf-bpm, .pf-met.flash1 .pf-bpm b { color: #1E1B18; }
+.pf-x { width: 36px; height: 36px; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; font-size: 16px; }
+.pf-met-row { display: flex; gap: 6px; }
+.pf-met-song { margin: -6px 0 0; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-met.flash1 .pf-met-song { color: #1E1B18; }
+.pf-met-row .btn { flex: 1; padding: 4px 6px; }
+#pf-silent[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #1E1B18; }
+#pf-start.on { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+@media print { .perform { display: none !important; } }
