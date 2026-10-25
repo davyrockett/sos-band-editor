@@ -118,8 +118,8 @@ body.editing .break-label { padding-left: 76px; }
 
 /* Metronome */
 .top-icons { display: flex; gap: 2px; flex: none; }
-.seg.met-mode { display: flex; margin: 4px 0 12px; }
-.met-mode button { flex: 1; }
+#panel-met { max-width: 620px; margin-left: max(0px, calc((100% - 948px) / 2)); }
+.icon-btn.on { color: var(--accent-ink); background: var(--accent-soft); }
 .met-box { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 12px 12px 18px; text-align: center; }
 .met-box.flash { animation: met-flash .18s ease-out; }
 .met-box.flash1 { animation: met-flash1 .22s ease-out; }
@@ -162,6 +162,8 @@ body.editing .break-label { padding-left: 76px; }
   .met-bpm { font-size: 96px; }
   .met-row .seg button { padding: 8px 12px; }
   .met-start { flex: 1 0 100%; margin-left: 0; }
+  #panel-met .panel-head .seg { width: 100%; }
+  #panel-met .panel-head .seg button { flex: 1; }
 }
 
 /* Stage plot: drawn on a fixed shape that scales with its width */

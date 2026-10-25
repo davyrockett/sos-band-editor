@@ -94,11 +94,12 @@ const canEdit = () => EDITOR;
 
 /* ---------- Tabs ---------- */
 let tab = lsGet(K.tab) || 'set';
-if (!document.querySelector(`.tabs [data-tab="${tab}"]`)) tab = 'set';   // e.g. the old Metronome tab
+if (!document.querySelector(`[data-panel="${tab}"]`)) tab = 'set';
 document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; lsSet(K.tab, tab); showTab(); }));
 function showTab() {
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.dataset.panel !== tab; });
+  $('met-open').classList.toggle('on', tab === 'met');   // the metronome opens from its icon, not a tab
 }
 
 /* ---------- Helpers for display ---------- */
@@ -1405,8 +1406,13 @@ function tapTempo(btn, onBpm) {
 }
 tapTempo($('met-tap'), setBpm);
 tapTempo($('se-tap'), bpm => { $('se-bpm').value = bpm; });
-$('met-open').addEventListener('click', () => { metMarks(); $('met-dlg').showModal(); });
-$('met-dlg').addEventListener('close', () => { if (metOn) metStop(); });
+// The icon opens the metronome like a section; tapping it again goes back to where you were.
+let metFrom = 'set';
+$('met-open').addEventListener('click', () => {
+  if (tab === 'met') tab = metFrom; else { metFrom = tab; tab = 'met'; }
+  lsSet(K.tab, tab);
+  showTab();
+});
 // Leaving the app stops it, so it never keeps clicking in a pocket.
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && metOn) metStop(); });
 metMarks();

@@ -47,7 +47,7 @@ applyTheme(savedTheme());
       <span class="band-sees editor-only" id="band-sees"></span>
     </div>
     <div class="top-icons">
-    <button type="button" class="icon-btn" id="met-open" aria-label="Metronome" aria-haspopup="dialog">
+    <button type="button" class="icon-btn" id="met-open" aria-label="Metronome">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M9.2 3h5.6l4.2 18H5L9.2 3Z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 17 17.5 6.5M7.5 14.5h9"/></svg>
     </button>
     <button type="button" class="icon-btn" id="settings-open" aria-label="Settings">
@@ -97,6 +97,48 @@ applyTheme(savedTheme());
     </div>
     <input type="search" class="search editor-only" id="song-search" placeholder="Search songs" aria-label="Search songs">
     <ul class="library editor-only" id="library"></ul>
+  </section>
+
+  <!-- METRONOME -->
+  <section class="panel" id="panel-met" data-panel="met" hidden>
+    <div class="panel-head">
+      <div>
+        <h2>Metronome</h2>
+        <p class="cap">Tap a song below to load its tempo, then Start to count it in.</p>
+      </div>
+      <div class="seg" id="met-mode" role="group" aria-label="Sound or silent">
+        <button type="button" data-silent="0">Sound</button>
+        <button type="button" data-silent="1">Silent (flash)</button>
+      </div>
+    </div>
+    <div class="met-box" id="met-box">
+      <div class="met-song">
+        <button type="button" class="met-step" id="met-prev" aria-label="Previous song">‹</button>
+        <span class="met-song-name" id="met-song">No song picked</span>
+        <button type="button" class="met-step" id="met-next" aria-label="Next song">›</button>
+      </div>
+      <div class="met-bpm"><span id="met-bpm">120</span><small>BPM</small></div>
+      <div class="met-dots" id="met-dots" aria-hidden="true"></div>
+    </div>
+    <div class="met-tempo">
+      <button type="button" class="btn met-pm" id="met-minus" aria-label="Slower">−</button>
+      <input type="range" id="met-slider" min="30" max="260" step="1" aria-label="Tempo">
+      <button type="button" class="btn met-pm" id="met-plus" aria-label="Faster">+</button>
+    </div>
+    <div class="met-row">
+      <div class="seg" id="met-beats" role="group" aria-label="Beats in a bar">
+        <button type="button" data-beats="2">2</button>
+        <button type="button" data-beats="3">3</button>
+        <button type="button" data-beats="4">4</button>
+        <button type="button" data-beats="6">6</button>
+      </div>
+      <button type="button" class="btn" id="met-tap">Tap tempo</button>
+      <button type="button" class="btn primary met-start" id="met-start">Start</button>
+    </div>
+    <h3 class="met-list-h">Tempos for this gig</h3>
+    <p class="cap edit-only">Type each song's tempo. It's saved with the song, so it shows in every gig and in the band app.</p>
+    <div class="setcols" id="met-list"></div>
+    <p class="empty" id="met-empty" hidden>No songs in this set yet.</p>
   </section>
 
   <!-- STAGE PLOT -->
@@ -293,49 +335,6 @@ applyTheme(savedTheme());
   </div>
 </dialog>
 
-<!-- Metronome -->
-<dialog id="met-dlg" class="sheet met-sheet">
-  <div class="sheet-in">
-    <div class="sheet-head">
-      <h2>Metronome</h2>
-      <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
-    </div>
-    <div class="seg met-mode" id="met-mode" role="group" aria-label="Sound or silent">
-      <button type="button" data-silent="0">Sound</button>
-      <button type="button" data-silent="1">Silent (flash)</button>
-    </div>
-    <div class="met-box" id="met-box">
-      <div class="met-song">
-        <button type="button" class="met-step" id="met-prev" aria-label="Previous song">‹</button>
-        <span class="met-song-name" id="met-song">No song picked</span>
-        <button type="button" class="met-step" id="met-next" aria-label="Next song">›</button>
-      </div>
-      <div class="met-bpm"><span id="met-bpm">120</span><small>BPM</small></div>
-      <div class="met-dots" id="met-dots" aria-hidden="true"></div>
-    </div>
-    <div class="met-tempo">
-      <button type="button" class="btn met-pm" id="met-minus" aria-label="Slower">−</button>
-      <input type="range" id="met-slider" min="30" max="260" step="1" aria-label="Tempo">
-      <button type="button" class="btn met-pm" id="met-plus" aria-label="Faster">+</button>
-    </div>
-    <div class="met-row">
-      <div class="seg" id="met-beats" role="group" aria-label="Beats in a bar">
-        <button type="button" data-beats="2">2</button>
-        <button type="button" data-beats="3">3</button>
-        <button type="button" data-beats="4">4</button>
-        <button type="button" data-beats="6">6</button>
-      </div>
-      <button type="button" class="btn" id="met-tap">Tap tempo</button>
-      <button type="button" class="btn primary met-start" id="met-start">Start</button>
-    </div>
-    <h3 class="met-list-h">Tempos for this gig</h3>
-    <p class="cap">Tap a song to load its tempo, then Start to count it in.</p>
-    <p class="cap edit-only">Type each song's tempo. It's saved with the song, so it shows in every gig and in the band app.</p>
-    <div class="setcols" id="met-list"></div>
-    <p class="empty" id="met-empty" hidden>No songs in this set yet.</p>
-  </div>
-</dialog>
-
 <!-- Settings -->
 <dialog id="settings" class="sheet">
   <div class="sheet-in">
@@ -413,7 +412,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v27';
+window.APP_VERSION = 'v28';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

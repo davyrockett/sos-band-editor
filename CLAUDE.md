@@ -102,7 +102,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   `Resounding Joy/SOS Band/SOS Chord Charts` as a song (records keep the file name in `source`) and re-uploads a chart
   when its PDF changes. Skips whole-set PDFs (names containing the word "Set"); never deletes songs. It commits
   straight to the sos-band-data clone in `../sos-band-data`. `--check` lists changes without making them.
-- **Metronome** (since 2026-10-25, David): a pop-up from the metronome icon beside the gear (David: not a section tab); closing it stops it. Tempo is saved on the song (`song.bpm`, 30–260), typed in the
+- **Metronome** (since 2026-10-25, David): a section (`#panel-met`, tab `met`) opened by the metronome icon beside the gear, NOT a button with the other section titles (David). The icon lights up while it is open; tapping it again goes back to the last section. (v27 tried a pop-up; David preferred the section.) Tempo is saved on the song (`song.bpm`, 30–260), typed in the
   tab's list of this gig's songs (editor) or in Edit song; the band app shows them read-only. Tap a song or ‹ › to load
   its tempo. Sound | Silent (flash) (David asked for a silent mode that just flashes); beats 2/3/4/6, beat 1 accented;
   tap tempo (also beside the tempo box in Edit song, David 2026-10-25); Web Audio lookahead scheduling, flashes follow the audio clock; screen wake lock while running; stops when
