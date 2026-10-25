@@ -1251,9 +1251,11 @@ document.querySelectorAll('dialog').forEach(d => {
 /* ---------- Metronome ----------
    Clicks are scheduled ahead on the Web Audio clock so they stay steady; the flashing follows the same clock.
    Silent mode schedules no sound, only the flashes. Tempos are saved on each song (song.bpm). */
+// Perform's state (see Perform below); here because the metronome reads its Silent switch.
+const pf = { silent: true, songs: [], i: 0, page: 1, docs: new Map(), cache: new Map(), lock: null, token: 0, barTimer: null };
 const BPM_MIN = 30, BPM_MAX = 260;
 const cleanBpm = v => { const n = Math.round(Number(v)); return n >= BPM_MIN && n <= BPM_MAX ? n : null; };
-const met = Object.assign({ bpm: 120, beats: 4, silent: false, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
+const met = Object.assign({ bpm: 120, beats: 4, silent: true, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
 let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null;
 const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song }));
 // The songs in this gig's set, in order (breaks and notes left out).
@@ -1273,7 +1275,8 @@ function metClick(t, accent) {
 }
 function metSchedule() {
   while (metNext < metCtx.currentTime + 0.12) {
-    if (!met.silent) metClick(metNext, metBeat === 0 && met.beats > 1);
+    // Perform's little metronome has its own Silent switch (on each time Perform opens).
+    if (!($('perform').hidden ? met.silent : pf.silent)) metClick(metNext, metBeat === 0 && met.beats > 1);
     metQueue.push({ t: metNext, beat: metBeat });
     metNext += 60 / met.bpm;
     metBeat = (metBeat + 1) % met.beats;
@@ -1289,7 +1292,7 @@ function metDraw() {
       void box.offsetWidth;   // restart the flash animation
       box.classList.add(hit.beat === 0 && met.beats > 1 ? 'flash1' : 'flash');
     }
-    $('met-dots').querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i === hit.beat));
+    document.querySelectorAll('#met-dots i, #pf-dots i').forEach(d => d.classList.toggle('on', d.dataset.n == hit.beat));
   }
   requestAnimationFrame(metDraw);
 }
@@ -1314,7 +1317,7 @@ function metStop() {
   metLock = null;
   $('met-box').classList.remove('flash', 'flash1');
   $('pf-met').classList.remove('flash', 'flash1');
-  $('met-dots').querySelectorAll('i').forEach(d => d.classList.remove('on'));
+  document.querySelectorAll('#met-dots i, #pf-dots i').forEach(d => d.classList.remove('on'));
   metMarks();
 }
 function setBpm(v) {
@@ -1333,11 +1336,11 @@ function metMarks() {
   $('pf-bpm').textContent = met.bpm;
   $('pf-start').textContent = metOn ? 'Stop' : 'Start';
   $('pf-start').classList.toggle('on', metOn);
-  $('pf-silent').setAttribute('aria-pressed', met.silent);
+  $('pf-silent').setAttribute('aria-pressed', pf.silent);
   document.querySelectorAll('#met-mode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.silent === '1') === String(met.silent)));
   document.querySelectorAll('#met-beats button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.beats) === met.beats));
-  const dots = $('met-dots');
-  if (dots.children.length !== met.beats) dots.replaceChildren(...Array.from({ length: met.beats }, () => el('i')));
+  for (const dots of [$('met-dots'), $('pf-dots')])
+    if (dots.children.length !== met.beats) dots.replaceChildren(...Array.from({ length: met.beats }, (_, n) => { const d = el('i'); d.dataset.n = n; return d; }));
   const list = metSongs(currentShow());
   const i = list.findIndex(x => x.id === met.song);
   const song = list[i];
@@ -1451,7 +1454,6 @@ metMarks();
    The set's charts full screen, one page at a time: tap the right side for the next page, the left side for the one
    before (straight on into the next song), the middle for the bar (Close, pick a song, metronome). Arrow keys and
    page-turner pedals work too. The screen stays on, and the little metronome follows the song on screen. */
-const pf = { songs: [], i: 0, page: 1, docs: new Map(), cache: new Map(), lock: null, token: 0, barTimer: null };
 function pfDoc(song) {
   if (!song?.chart) return Promise.resolve(null);
   if (!pf.docs.has(song.id)) pf.docs.set(song.id, (async () => {
@@ -1539,6 +1541,7 @@ function openPerform() {
   const sel = $('pf-song');
   sel.replaceChildren(...pf.songs.map((x, n) => new Option(`${n + 1}. ${x.title}${x.bpm ? ` · ${x.bpm}` : ''}`, x.id)));
   pf.i = 0; pf.page = 1; pf.cache.clear();
+  pf.silent = true;   // on stage the little metronome starts silent (David)
   const v = $('perform');
   v.hidden = false;
   document.body.classList.add('viewing');
@@ -1590,7 +1593,7 @@ $('pf-met-open').addEventListener('click', () => { metMarks(); $('pf-met').hidde
 $('pf-met-close').addEventListener('click', () => { $('pf-met').hidden = true; if (metOn) metStop(); });
 $('pf-minus').addEventListener('click', () => setBpm(met.bpm - 1));
 $('pf-plus').addEventListener('click', () => setBpm(met.bpm + 1));
-$('pf-silent').addEventListener('click', () => { met.silent = !met.silent; saveMet(); metMarks(); });
+$('pf-silent').addEventListener('click', () => { pf.silent = !pf.silent; metMarks(); });
 $('pf-start').addEventListener('click', () => (metOn ? metStop() : metStart()));
 tapTempo($('pf-tap'), setBpm);
 

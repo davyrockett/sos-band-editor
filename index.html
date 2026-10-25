@@ -420,6 +420,7 @@ applyTheme(savedTheme());
       <button type="button" class="pf-x" id="pf-met-close" aria-label="Close the metronome">✕</button>
     </div>
     <p class="pf-met-song" id="pf-met-song"></p>
+    <div class="met-dots pf-dots" id="pf-dots" aria-hidden="true"></div>
     <div class="pf-met-row">
       <button type="button" class="btn small" id="pf-minus" aria-label="Slower">−</button>
       <button type="button" class="btn small" id="pf-plus" aria-label="Faster">+</button>
@@ -441,7 +442,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v32';
+window.APP_VERSION = 'v33';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

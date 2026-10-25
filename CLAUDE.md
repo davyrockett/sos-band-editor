@@ -110,14 +110,15 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   tab's list of this gig's songs (editor) or in Edit song; the band app shows them read-only. Tap a song or ‹ › to load
   its tempo. Sound | Silent (flash) (David asked for a silent mode that just flashes); beats 2/3/4/6, beat 1 accented;
   tap tempo (also beside the tempo box in Edit song, David 2026-10-25); Web Audio lookahead scheduling, flashes follow the audio clock; screen wake lock while running; stops when
-  the app is hidden. Metronome settings are per device (`sos.met` / `sosed.met`). David said "style it like this" but
+  the app is hidden. Metronome settings are per device (`sos.met` / `sosed.met`); it starts in Silent until changed (David). David said "style it like this" but
   no picture came through; it uses the app's own style for now.
 - **Perform** (2026-10-25, David): Setlist's Perform button (both apps) opens the gig's charts full screen (`#perform`,
   `openPerform()`), one page at a time, fitted to the screen on a dark background. Tap right 35% = next page, left 35% =
   previous (runs on into the next/previous song; songs without a chart show a title card); middle = the bar (Close, song
   picker, page count, metronome icon; it hides itself after a few seconds). Arrow / Page keys and Space (page-turner pedals)
   work too. Screen wake lock while open; browser full screen where allowed. The metronome icon pops up a small metronome in
-  the bottom-right corner (BPM, − + Tap Silent, Start; flashes like the big one) that follows the song on screen (`pickSong`);
+  the bottom-right corner (BPM, song name, beat lights, − + Tap Silent, Start; flashes like the big one; SILENT each time
+  Perform opens, its own switch `pf.silent`, David) that follows the song on screen (`pickSong`);
   closing it or Perform stops it.
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
