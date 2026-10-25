@@ -535,9 +535,10 @@ function notesBox(s, key, label) {
    The channels come from who's on the stage plot: each Mic and DI Box in a player's gear needs one.
    Default: one 10-channel mixer. Or two 8-channel mixers: A takes the instruments, and its main out
    goes in stereo into channels 7–8 of B, which takes the vocals and feeds the PA.
-   show.mix = { setup: 'one' | 'two', ch: { '1': key, 'A1': key, 'B3': key… }, off: [keys], out }
-   key = 'memberId|mic|0', 'memberId|di|0', or 'text:…' (anything else typed in). Inputs not on a saved
-   channel go on the first free one, in stage order (left to right), vocals first. */
+   show.mix = { setup: 'one' | 'two', ch: { '1': key, 'A1': key, 'B3': key… }, known: [keys], out }
+   key = 'memberId|mic|0', 'memberId|di|0', or 'text:…' (anything else typed in). Until a channel is set,
+   inputs fill the channels in stage order (left to right), vocals first. After that, only new inputs
+   (not in `known`) go on the first spare channel; the page warns when an input has no channel or two. */
 const MIX = {
   one: [{ id: '', name: 'Mixer', role: '10 channels, out to the PA', n: 10 }],
   two: [{ id: 'A', name: 'Mixer A', role: 'Instrument submix, 8 channels', n: 8 },
@@ -562,27 +563,29 @@ function mixLayout(s) {
   const slots = MIX[setup].flatMap(x => Array.from({ length: x.n }, (_, i) => x.id + (i + 1)));
   const inputs = mixInputs(s);
   const byKey = new Map(inputs.map(i => [i.key, i]));
-  const off = new Set((mix.off || []).filter(k => byKey.has(k)));
   const saved = mix.ch || {};
-  const at = {}, used = new Set();
+  const pinned = slots.some(c => c in saved);
+  // The inputs there were when the channels were last set (older saves: whatever was on a channel or left off).
+  const known = new Set(mix.known || [...Object.values(saved), ...(mix.off || [])]);
+  const at = {};
   for (const c of slots) {
     const k = saved[c];
-    if (k?.startsWith('text:')) at[c] = k;
-    else if (byKey.has(k) && !used.has(k) && !off.has(k)) { at[c] = k; used.add(k); }
+    if (k?.startsWith('text:') || byKey.has(k)) at[c] = k;
   }
   // On two mixers, instruments go on A and vocals on B, spilling onto the other one when it's full.
   const onA = slots.filter(c => c[0] === 'A'), onB = slots.filter(c => c[0] === 'B');
-  const short = [];
   for (const inp of inputs) {
-    if (used.has(inp.key) || off.has(inp.key)) continue;
+    if (slots.some(c => at[c] === inp.key) || (pinned && known.has(inp.key))) continue;
     const order = setup === 'one' ? slots : inp.type === 'mic' ? [...onB, ...onA] : [...onA, ...onB];
     const c = order.find(x => !at[x]);
-    if (c) { at[c] = inp.key; used.add(inp.key); } else short.push(inp);
+    if (c) at[c] = inp.key;
   }
+  const where = key => slots.filter(c => at[c] === key);
   return {
-    setup, slots, at, byKey, short,
-    off: inputs.filter(i => off.has(i.key)),
-    pinned: slots.some(c => c in saved),
+    setup, slots, at, byKey, where, pinned,
+    none: inputs.filter(i => !where(i.key).length),
+    twice: inputs.filter(i => where(i.key).length > 1),
+    full: slots.every(c => at[c]),
     out: mix.out ?? ((s.mixers || []).at(-1)?.out || 'Main out L/R → PA speakers'),
   };
 }
@@ -602,16 +605,9 @@ function setChannel(c, val) {
   patchShow(v => {
     const ch = { ...(v.mix?.ch || {}) };
     for (const x of L.slots) ch[x] = L.at[x] || '';
-    const off = new Set(v.mix?.off || []);
-    const prev = ch[c];
-    if (val && !val.startsWith('text:')) {
-      off.delete(val);
-      const from = L.slots.find(x => x !== c && ch[x] === val);
-      if (from) ch[from] = prev;   // swap: what was here moves to where the new one was
-    }
-    if (!val && prev && !prev.startsWith('text:')) off.add(prev);   // "Spare": leave that input off the mixer
     ch[c] = val;
-    v.mix = { ...(v.mix || {}), setup: L.setup, ch, off: [...off] };
+    const { off, ...mix } = v.mix || {};
+    v.mix = { ...mix, setup: L.setup, ch, known: [...L.byKey.keys()] };
   });
 }
 function renderMixers(s) {
@@ -633,7 +629,7 @@ function renderMixers(s) {
     const ol = el('ol');
     for (let i = 1; i <= mx.n; i++) {
       const c = mx.id + i, k = L.at[c] || '', inp = L.byKey.get(k);
-      const li = el('li');
+      const li = el('li', inp && L.where(k).length > 1 ? 'twice' : '');
       if (inp) li.style.setProperty('--kc', `var(--k-${inp.m.kind})`);
       li.append(el('span', 'ch', c));
       if (edit) {
@@ -641,9 +637,12 @@ function renderMixers(s) {
         const sel = el('select');
         sel.setAttribute('aria-label', `What goes on ${chName(c)}`);
         sel.append(new Option('Spare', ''));
+        // Inputs already on another channel are greyed; ones with no channel yet are marked.
         for (const x of [...L.byKey.values()]) {
-          const where = L.slots.find(y => y !== c && L.at[y] === x.key);
-          sel.append(new Option(label(x) + (where ? ` (on ${chName(where)})` : ''), x.key));
+          const others = L.where(x.key).filter(y => y !== c);
+          const o = new Option(label(x) + (others.length ? ` (on ${others.map(chName).join(', ')})` : x.key === k ? '' : ' (no channel)'), x.key);
+          if (others.length) o.className = 'used';
+          sel.append(o);
         }
         sel.append(new Option('Something else…', 'text:'));
         sel.value = k.startsWith('text:') ? 'text:' : k;
@@ -694,8 +693,10 @@ function renderMixers(s) {
     box.append(card);
   }
   const msg = (cls, text) => $('mix-msgs').append(el('p', 'mix-msg ' + cls, text));
-  if (L.short.length) msg('warn', `Not enough channels for: ${L.short.map(label).join(', ')}. ${L.setup === 'one' ? 'Switch to two mixers, or set' : 'Set'} a channel to something else.`);
-  if (L.off.length) msg('', `Left off the mixer: ${L.off.map(label).join(', ')}.${edit ? ' Pick one on a channel to put it back.' : ''}`);
+  const chList = cs => cs.map(chName).join(' and ');
+  if (L.twice.length) msg('warn', `On two channels: ${L.twice.map(i => `${label(i)} (${chList(L.where(i.key))})`).join(', ')}.`);
+  if (L.none.length) msg('warn', `No channel: ${L.none.map(label).join(', ')}.` + (!edit ? '' : !L.full ? ' Pick it on a spare channel.'
+    : L.setup === 'one' ? ' Every channel is taken: switch to two mixers or free one up.' : ' Every channel is taken: free one up.'));
   const own = [];
   for (const l of s.lineup || []) {
     const m = get(l.member);
@@ -712,7 +713,8 @@ $('mix-redo').addEventListener('click', () => {
   patchShow(v => {
     const ch = { ...(v.mix?.ch || {}) };
     for (const c of L.slots) delete ch[c];
-    v.mix = { ...(v.mix || {}), ch, off: [] };
+    const { off, known, ...mix } = v.mix || {};
+    v.mix = { ...mix, ch };
   });
   toast('Channels now follow the stage plot, left to right: vocals first, then instruments.');
 });

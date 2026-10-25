@@ -146,7 +146,7 @@ applyTheme(savedTheme());
         <button type="button" data-setup="two">Two 8-channel</button>
       </div>
       <button type="button" class="btn small" id="mix-redo">Renumber from the stage plot</button>
-      <p class="cap">New players go on the first spare channel. Pick what goes on a channel to change it (they swap).</p>
+      <p class="cap">Pick what goes on each channel. New players go on the first spare channel. A warning shows if someone has no channel or is on two.</p>
     </div>
     <h3 class="print-only print-title" id="mixer-print-title"></h3>
     <div id="mixers" class="mixers"></div>
@@ -344,7 +344,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v23';
+window.APP_VERSION = 'v24';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

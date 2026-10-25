@@ -70,8 +70,9 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
 - **Mixer** (since 2026-10-24) is built from who's on the stage plot: every Mic and DI Box in a player's gear needs a channel
   (amps and drum kits are listed as "not through the mixer"). Default: one 10-channel mixer; option: two 8-channel mixers,
   A = instruments, its main out in stereo into B ch 7–8, B = vocals + master. Data: `show.mix` (`setup`, `ch` = channel → input,
-  `off` = inputs left off, `out`); unsaved channels fill in stage order, left to right, vocals first; any change saves the whole
-  layout so channels stay put. The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
+  `known` = inputs there when channels were last set, `out`); unsaved channels fill in stage order, left to right, vocals first;
+  any change saves the whole layout so channels stay put, and only new inputs go on a spare channel by themselves.
+  Picking an input never swaps: the page warns (red) when an input has no channel or is on two (David's wish, 2026-10-24). The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
   The Gear tab's PA section adds the mixers, their power cables and (two mixers) the A → B stereo cables from the setup (`mixerGear`).
 Gigs ("shows" in the code/data): the picker in the header lists them, upcoming first. Band members can switch
 gigs too; the band app opens on the one David marks with **★ Make the band app open on this gig** (`band.currentShow`).
