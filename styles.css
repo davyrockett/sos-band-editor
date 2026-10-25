@@ -249,6 +249,8 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .mixer li.twice select { border-color: var(--danger); border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--bg)); }
 .mixer li.ret .ch { background: var(--accent); color: #1E1B18; }
 .mixer .out-edit { margin: 10px 0 0; }
+.out-lbl { display: grid; gap: 3px; font-size: 14px; }
+.out-lbl b { color: var(--accent-ink); }
 .mix-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 14px; }
 .mix-bar .cap { flex-basis: 100%; margin: 0; }
 .mix-msg { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; margin: 0 0 10px; font-size: 15px; }

@@ -74,6 +74,9 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
   any change saves the whole layout so channels stay put, and only new inputs go on a spare channel by themselves.
   Picking an input never swaps: the page warns (red) when an input has no channel or is on two (David's wish, 2026-10-24). The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
   The Gear tab's PA section adds the mixers, their power cables and (two mixers) the A → B stereo cables from the setup (`mixerGear`).
+  **Monitors** (2026-10-25, David): "Monitor" is a standard gear item (`GEAR_ORDER`) given to whoever needs one; each adds a
+  power cable and a long XLR to the PA section (`monitorCount`), and the main (vocals) mixer has an editable Monitor send
+  line under Main out (`show.mix.mon`, default "Aux 1 → monitor(s)" while there are monitors; blank = none).
 Gigs ("shows" in the code/data): the picker in the header lists them, upcoming first. Band members can switch
 gigs too; the band app opens on the one David marks with **★ Make the band app open on this gig** (`band.currentShow`).
 At the moment: Ionis Event (Nov 4 2026), Living Your Dreams (Nov 7 2026, ★, the one being prepared) and The Midway;
