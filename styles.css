@@ -118,7 +118,7 @@ body.editing .break-label { padding-left: 76px; }
 
 /* Metronome */
 .top-icons { display: flex; gap: 2px; flex: none; }
-#panel-met { max-width: 620px; margin-left: max(0px, calc((100% - 948px) / 2)); }
+#panel-met { max-width: 620px; margin: 0 auto; }
 .icon-btn.on { color: var(--accent-ink); background: var(--accent-soft); }
 .met-box { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 12px 12px 18px; text-align: center; }
 .met-box.flash { animation: met-flash .18s ease-out; }
@@ -164,6 +164,27 @@ body.editing .break-label { padding-left: 76px; }
   .met-start { flex: 1 0 100%; margin-left: 0; }
   #panel-met .panel-head .seg { width: 100%; }
   #panel-met .panel-head .seg button { flex: 1; }
+}
+/* Phones on their side: the big tempo on the left, every control on the right, all on one screen (song list below) */
+@media (orientation: landscape) and (max-height: 520px) {
+  body:has(#panel-met:not([hidden])) main { padding-top: 10px; }
+  body:has(#panel-met:not([hidden])) .band-sees { display: none; }
+  #panel-met { max-width: 860px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) auto; gap: 10px;
+    grid-template-areas: "box tempo tempo" "box beats tap" "box mode start"; align-items: center; }
+  #panel-met .panel-head, #panel-met .met-row { display: contents; }
+  #panel-met .panel-head > div:first-child { display: none; }
+  .met-box { grid-area: box; align-self: stretch; display: flex; flex-direction: column; justify-content: center; padding: 8px 10px 12px; margin-right: 6px; }
+  .met-bpm { font-size: 92px; margin: 2px 0; }
+  .met-tempo { grid-area: tempo; margin: 0; }
+  #met-beats { grid-area: beats; }
+  #met-tap { grid-area: tap; }
+  #met-mode { grid-area: mode; }
+  #met-start { grid-area: start; margin: 0; }
+  #met-beats, #met-mode { display: flex; width: 100%; }
+  #met-beats button, #met-mode button { flex: 1; padding: 8px 6px; min-height: 44px; white-space: nowrap; }
+  #met-tap, #met-start { width: 100%; min-width: 110px; }
+  #panel-met > :not(.panel-head):not(.met-box):not(.met-tempo):not(.met-row) { grid-column: 1 / -1; }
+  .met-list-h { margin-top: 16px; }
 }
 
 /* Stage plot: drawn on a fixed shape that scales with its width */
