@@ -136,13 +136,21 @@ applyTheme(savedTheme());
     <div class="panel-head">
       <div>
         <h2>Mixer routing</h2>
-        <p class="cap">What plugs into each channel.</p>
+        <p class="cap">What plugs into each channel, from the mics and DI boxes of the players on the stage plot.</p>
       </div>
       <div class="head-btns"><button type="button" class="btn" data-print>Print</button></div>
     </div>
+    <div class="edit-only mix-bar">
+      <div class="seg" id="mix-setup" role="group" aria-label="Mixer setup">
+        <button type="button" data-setup="one">One 10-channel</button>
+        <button type="button" data-setup="two">Two 8-channel</button>
+      </div>
+      <button type="button" class="btn small" id="mix-redo">Renumber from the stage plot</button>
+      <p class="cap">New players go on the first spare channel. Pick what goes on a channel to change it (they swap).</p>
+    </div>
     <h3 class="print-only print-title" id="mixer-print-title"></h3>
     <div id="mixers" class="mixers"></div>
-    <div class="edit-only add-row"><button type="button" class="btn" id="mixer-add">+ Add mixer</button></div>
+    <div id="mix-msgs"></div>
     <div id="mixer-notes"></div>
   </section>
 
@@ -336,7 +344,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v21';
+window.APP_VERSION = 'v22';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

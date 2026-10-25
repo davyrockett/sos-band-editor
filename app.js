@@ -362,6 +362,7 @@ function renderPlot(s, b) {
     sp.append(i, k.label);
     legend.append(sp);
   }
+  const chs = mixChannels(s);
   for (const l of on) {
     const m = l.m;
     const c = el('div', 'pcard');
@@ -369,6 +370,7 @@ function renderPlot(s, b) {
     c.style.left = l.x + '%';
     c.style.top = l.y + '%';
     c.append(el('div', 'ic', icons(m)), el('div', 'nm', m.name), el('div', 'in', m.instrument || ''));
+    if (chs[m.id]) c.append(el('div', 'chs', `🎚 ${chs[m.id]}`));
     const ul = el('ul');
     gearLines(m).forEach(t => ul.append(el('li', null, t)));
     c.append(ul);
@@ -511,79 +513,191 @@ function notesBox(s, key, label) {
   return d;
 }
 
-/* Mixers */
+/* Mixers
+   The channels come from who's on the stage plot: each Mic and DI Box in a player's gear needs one.
+   Default: one 10-channel mixer. Or two 8-channel mixers: A takes the instruments, and its main out
+   goes in stereo into channels 7–8 of B, which takes the vocals and feeds the PA.
+   show.mix = { setup: 'one' | 'two', ch: { '1': key, 'A1': key, 'B3': key… }, off: [keys], out }
+   key = 'memberId|mic|0', 'memberId|di|0', or 'text:…' (anything else typed in). Inputs not on a saved
+   channel go on the first free one, in stage order (left to right), vocals first. */
+const MIX = {
+  one: [{ id: '', name: 'Mixer', role: '10 channels, out to the PA', n: 10 }],
+  two: [{ id: 'A', name: 'Mixer A', role: 'Instrument submix, 8 channels', n: 8 },
+    { id: 'B', name: 'Mixer B', role: 'Vocals + master, 8 channels', n: 6, ret: true }],
+};
+function mixInputs(s) {
+  const on = (s.lineup || []).map(l => ({ ...l, m: get(l.member) })).filter(l => l.m).sort((a, b) => a.x - b.x);
+  const out = [];
+  for (const type of ['mic', 'di']) for (const { m } of on) {
+    const n = (m.gear || []).filter(g => g.item === (type === 'mic' ? 'Mic' : 'DI Box')).reduce((t, g) => t + (g.qty || 1), 0);
+    const inst = (m.instrument || kindOf(m.kind).label).split('/')[0].trim();
+    for (let i = 0; i < n; i++) {
+      const what = type === 'mic' ? 'Vox' + (n > 1 ? ` ${i + 1}` : '') : `${inst} (DI${n > 1 ? ` ${i + 1}` : ''})`;
+      out.push({ key: `${m.id}|${type}|${i}`, m, type, what });
+    }
+  }
+  return out;
+}
+function mixLayout(s) {
+  const mix = s.mix || {};
+  const setup = mix.setup === 'two' ? 'two' : 'one';
+  const slots = MIX[setup].flatMap(x => Array.from({ length: x.n }, (_, i) => x.id + (i + 1)));
+  const inputs = mixInputs(s);
+  const byKey = new Map(inputs.map(i => [i.key, i]));
+  const off = new Set((mix.off || []).filter(k => byKey.has(k)));
+  const saved = mix.ch || {};
+  const at = {}, used = new Set();
+  for (const c of slots) {
+    const k = saved[c];
+    if (k?.startsWith('text:')) at[c] = k;
+    else if (byKey.has(k) && !used.has(k) && !off.has(k)) { at[c] = k; used.add(k); }
+  }
+  // On two mixers, instruments go on A and vocals on B, spilling onto the other one when it's full.
+  const onA = slots.filter(c => c[0] === 'A'), onB = slots.filter(c => c[0] === 'B');
+  const short = [];
+  for (const inp of inputs) {
+    if (used.has(inp.key) || off.has(inp.key)) continue;
+    const order = setup === 'one' ? slots : inp.type === 'mic' ? [...onB, ...onA] : [...onA, ...onB];
+    const c = order.find(x => !at[x]);
+    if (c) { at[c] = inp.key; used.add(inp.key); } else short.push(inp);
+  }
+  return {
+    setup, slots, at, byKey, short,
+    off: inputs.filter(i => off.has(i.key)),
+    pinned: slots.some(c => c in saved),
+    out: mix.out ?? ((s.mixers || []).at(-1)?.out || 'Main out L/R → PA speakers'),
+  };
+}
+// Which channels each player is on, for the stage plot.
+function mixChannels(s) {
+  const L = mixLayout(s), by = {};
+  for (const c of L.slots) {
+    const inp = L.byKey.get(L.at[c]);
+    if (inp) (by[inp.m.id] ||= []).push(c);
+  }
+  for (const id in by) by[id] = (L.setup === 'one' ? 'Ch ' : '') + by[id].join(', ');
+  return by;
+}
+// Every change saves the whole layout, so channels stay put from then on.
+function setChannel(c, val) {
+  const L = mixLayout(currentShow());
+  patchShow(v => {
+    const ch = { ...(v.mix?.ch || {}) };
+    for (const x of L.slots) ch[x] = L.at[x] || '';
+    const off = new Set(v.mix?.off || []);
+    const prev = ch[c];
+    if (val && !val.startsWith('text:')) {
+      off.delete(val);
+      const from = L.slots.find(x => x !== c && ch[x] === val);
+      if (from) ch[from] = prev;   // swap: what was here moves to where the new one was
+    }
+    if (!val && prev && !prev.startsWith('text:')) off.add(prev);   // "Spare": leave that input off the mixer
+    ch[c] = val;
+    v.mix = { ...(v.mix || {}), setup: L.setup, ch, off: [...off] };
+  });
+}
 function renderMixers(s) {
   const box = $('mixers');
   box.replaceChildren();
   $('mixer-print-title').textContent = s ? `SOS Band — Mixer routing · ${s.name} · ${fmtDate(s.date, false)}` : '';
   $('mixer-notes').replaceChildren();
+  $('mix-msgs').replaceChildren();
   if (!s) return;
   const edit = canEdit();
-  (s.mixers || []).forEach((mx, mi) => {
-    const letter = (mx.name.match(/\b([A-Z])$/) || [])[1] || String(mi + 1);
+  const L = mixLayout(s);
+  document.querySelectorAll('#mix-setup button').forEach(b => b.setAttribute('aria-pressed', b.dataset.setup === L.setup));
+  $('mix-redo').disabled = !L.pinned;
+  const label = inp => `${inp.m.name} — ${inp.what}`;
+  const chName = c => (L.setup === 'one' ? `ch ${c}` : c);
+  for (const mx of MIX[L.setup]) {
     const card = el('div', 'mixer');
-    if (edit) {
-      const f = el('div', 'mixer-edit');
-      const nm = el('input'); nm.value = mx.name; nm.setAttribute('aria-label', 'Mixer name');
-      nm.addEventListener('change', () => patchShow(v => { v.mixers[mi].name = nm.value.trim() || 'Mixer'; }));
-      const rl = el('input'); rl.value = mx.role || ''; rl.placeholder = 'What it does, e.g. Vocals + master'; rl.setAttribute('aria-label', 'What this mixer does');
-      rl.addEventListener('change', () => patchShow(v => { v.mixers[mi].role = rl.value.trim(); }));
-      f.append(nm, rl);
-      card.append(f);
-    } else {
-      card.append(el('h3', null, mx.name), el('p', 'role', mx.role || ''));
-    }
+    card.append(el('h3', null, mx.name), el('p', 'role', mx.role));
     const ol = el('ol');
-    (mx.channels || []).forEach((ch, ci) => {
+    for (let i = 1; i <= mx.n; i++) {
+      const c = mx.id + i, k = L.at[c] || '', inp = L.byKey.get(k);
       const li = el('li');
-      li.append(el('span', 'ch', letter + (ci + 1)));
+      if (inp) li.style.setProperty('--kc', `var(--k-${inp.m.kind})`);
+      li.append(el('span', 'ch', c));
       if (edit) {
-        const inp = el('input');
-        inp.value = ch;
-        inp.placeholder = 'spare';
-        inp.setAttribute('aria-label', `Channel ${letter}${ci + 1}`);
-        inp.addEventListener('change', () => patchShow(v => { v.mixers[mi].channels[ci] = inp.value.trim(); }));
-        li.append(inp);
-      } else li.append(ch ? el('span', null, ch) : el('span', 'spare', 'spare'));
+        const pick = el('div', 'pick');
+        const sel = el('select');
+        sel.setAttribute('aria-label', `What goes on ${chName(c)}`);
+        sel.append(new Option('Spare', ''));
+        for (const x of [...L.byKey.values()]) {
+          const where = L.slots.find(y => y !== c && L.at[y] === x.key);
+          sel.append(new Option(label(x) + (where ? ` (on ${chName(where)})` : ''), x.key));
+        }
+        sel.append(new Option('Something else…', 'text:'));
+        sel.value = k.startsWith('text:') ? 'text:' : k;
+        sel.addEventListener('change', () => {
+          setChannel(c, sel.value);
+          if (sel.value === 'text:') document.querySelector(`#mixers input[data-ch="${c}"]`)?.focus();
+        });
+        pick.append(sel);
+        if (k.startsWith('text:')) {
+          const t = el('input');
+          t.dataset.ch = c;
+          t.value = k.slice(5);
+          t.placeholder = 'e.g. Laptop (backing tracks)';
+          t.setAttribute('aria-label', `What goes on ${chName(c)}`);
+          t.addEventListener('change', () => setChannel(c, 'text:' + t.value.trim()));
+          pick.append(t);
+        }
+        li.append(pick);
+      } else if (inp) {
+        const chip = el('span', 'chip', inp.m.name);
+        chip.style.setProperty('--kc', `var(--k-${inp.m.kind})`);
+        li.append(chip, el('span', 'what', inp.what));
+      } else if (k.slice(5)) li.append(el('span', null, k.slice(5)));
+      else li.append(el('span', 'spare', 'spare'));
       ol.append(li);
-    });
+    }
+    if (mx.ret) {
+      const li = el('li', 'ret');
+      li.append(el('span', 'ch', `${mx.id}${mx.n + 1}–${mx.n + 2}`), el('span', null, 'Mixer A (stereo submix)'));
+      ol.append(li);
+    }
     card.append(ol);
-    if (edit) {
+    const master = !(L.setup === 'two' && mx.id === 'A');
+    if (master && edit) {
       const out = el('input');
-      out.value = mx.out || '';
+      out.value = L.out;
       out.placeholder = 'Main out goes to…';
       out.setAttribute('aria-label', 'Main out goes to');
-      out.style.marginTop = '10px';
-      out.addEventListener('change', () => patchShow(v => { v.mixers[mi].out = out.value.trim(); }));
-      const ow = el('div', 'mixer-edit');
+      out.addEventListener('change', () => patchShow(v => { v.mix = { ...(v.mix || {}), out: out.value.trim() }; }));
+      const ow = el('div', 'mixer-edit out-edit');
       ow.append(out);
       card.append(ow);
-      const foot = el('div', 'mixer-foot');
-      const add = el('button', 'btn small', '+ Channel'); add.type = 'button';
-      add.addEventListener('click', () => patchShow(v => { v.mixers[mi].channels.push(''); }));
-      const less = el('button', 'btn small', '− Channel'); less.type = 'button';
-      less.disabled = !(mx.channels || []).length;
-      less.addEventListener('click', () => patchShow(v => { v.mixers[mi].channels.pop(); }));
-      const del = el('button', 'btn small danger', 'Remove mixer'); del.type = 'button';
-      del.addEventListener('click', () => {
-        if (!del.classList.contains('armed')) { del.classList.add('armed'); del.textContent = 'Tap again to remove'; return; }
-        patchShow(v => { v.mixers.splice(mi, 1); });
-      });
-      foot.append(add, less, del);
-      card.append(foot);
-    } else if (mx.out) {
+    } else {
       const p = el('p', 'out');
-      p.append(el('b', null, 'Out: '), mx.out);
+      p.append(el('b', null, 'Out: '), master ? L.out : 'Main out L/R → Mixer B ch 7–8 (stereo, 2 cables)');
       card.append(p);
     }
     box.append(card);
-  });
-  $('mixer-notes').append(notesBox(s, 'mixerNotes', 'Mixer notes (e.g. amps not in the PA)'));
+  }
+  const msg = (cls, text) => $('mix-msgs').append(el('p', 'mix-msg ' + cls, text));
+  if (L.short.length) msg('warn', `Not enough channels for: ${L.short.map(label).join(', ')}. ${L.setup === 'one' ? 'Switch to two mixers, or set' : 'Set'} a channel to something else.`);
+  if (L.off.length) msg('', `Left off the mixer: ${L.off.map(label).join(', ')}.${edit ? ' Pick one on a channel to put it back.' : ''}`);
+  const own = [];
+  for (const l of s.lineup || []) {
+    const m = get(l.member);
+    for (const g of m?.gear || []) if (/\bamp\b|drum kit/i.test(g.item)) own.push(`${m.name} (${g.item})`);
+  }
+  if (own.length) msg('', `Not through the mixer: ${own.join(', ')}.`);
+  $('mixer-notes').append(notesBox(s, 'mixerNotes', 'Mixer notes'));
 }
-$('mixer-add').addEventListener('click', () => patchShow(v => {
-  const n = (v.mixers || []).length;
-  v.mixers = [...(v.mixers || []), { name: `Mixer ${String.fromCharCode(65 + n)}`, role: '', channels: Array(8).fill(''), out: '' }];
+document.querySelectorAll('#mix-setup button').forEach(b => b.addEventListener('click', () => {
+  patchShow(v => { v.mix = { ...(v.mix || {}), setup: b.dataset.setup }; });
 }));
+$('mix-redo').addEventListener('click', () => {
+  const L = mixLayout(currentShow());
+  patchShow(v => {
+    const ch = { ...(v.mix?.ch || {}) };
+    for (const c of L.slots) delete ch[c];
+    v.mix = { ...(v.mix || {}), ch, off: [] };
+  });
+  toast('Channels now follow the stage plot, left to right: vocals first, then instruments.');
+});
 
 /* Band */
 function renderBand(s) {
