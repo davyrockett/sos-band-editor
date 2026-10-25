@@ -116,8 +116,8 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   `openPerform()`), one page at a time, fitted to the screen on a dark background. Tap right 35% = next page, left 35% =
   previous (runs on into the next/previous song; songs without a chart show a title card); middle = the bar (Close, song
   picker, page count, metronome icon; it hides itself after a few seconds). Arrow / Page keys and Space (page-turner pedals)
-  work too. Screen wake lock while open; browser full screen where allowed. The metronome icon pops up a small metronome in
-  the bottom-right corner (BPM, song name, beat lights, − + Tap Silent, Start; flashes like the big one; SILENT each time
+  work too. Screen wake lock while open; browser full screen where allowed. The metronome icon pops up a small metronome at
+  the top right, just under the icon with a pointer to it (David), sliding up into the corner when the bar hides (BPM, song name, beat lights, − + Tap Silent, Start; flashes like the big one; SILENT each time
   Perform opens, its own switch `pf.silent`, David) that follows the song on screen (`pickSong`);
   closing it or Perform stops it.
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.

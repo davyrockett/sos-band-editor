@@ -13,7 +13,7 @@ The band sees everything in the view-only **SOS Band** app: https://www.davyrock
   **★ Make the band app open on this gig**. Band members can switch gigs too; ★ is just where their app opens.
 - **Perform** (Setlist): the set's charts full screen for playing. Tap the right side for the next page, the left side
   for the page before (it carries on into the next song); tap the middle for Close, a song list and the metronome button,
-  which pops up a small metronome in the corner already set to the song's tempo. The screen stays on. Page-turner pedals work.
+  which pops up a small metronome at the top right, under its button, already set to the song's tempo. The screen stays on. Page-turner pedals work.
 - **Metronome** (the metronome icon beside the gear): type each song's tempo in the list under it (or in Edit song). Tap a song (or use ‹ ›) to load
   its tempo, then **Start**. **Silent (flash)** only flashes the box, brighter on beat 1. Also: − / +, slider,
   Tap tempo, 2 / 3 / 4 / 6 beats. The screen stays on while it runs; it stops if you leave the app. Tap the icon again to go back.

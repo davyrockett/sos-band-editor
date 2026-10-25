@@ -415,9 +415,16 @@ body.viewing { overflow: hidden; }
 .pf-bar select { min-height: 40px; max-width: min(360px, 50vw); border: 1px solid #3B342D; border-radius: 999px; padding: 4px 14px; background: #2A2520; color: #F0EBE3; font-weight: 700; }
 .pf-count { flex: 1; min-width: 0; color: #A3A3A3; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-icon { width: 44px; height: 44px; border-radius: 50%; border: 1px solid #3B342D; background: #2A2520; color: #FF9433; display: grid; place-items: center; cursor: pointer; }
-.pf-met { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); width: 210px;
+/* Pops up just under its icon at the top right, with a little pointer up to it */
+.pf-met { position: absolute; right: max(12px, env(safe-area-inset-right)); top: calc(max(10px, env(safe-area-inset-top)) + 54px); width: 210px;
   background: var(--surface); color: var(--ink); border: 2px solid var(--line); border-radius: 14px; padding: 8px 10px 10px;
   box-shadow: 0 10px 30px rgba(0,0,0,.45); display: grid; gap: 8px; }
+.pf-met::before { content: ""; position: absolute; top: -8px; right: 15px; width: 14px; height: 14px; background: inherit;
+  border-left: 2px solid var(--line); border-top: 2px solid var(--line); transform: rotate(45deg); }
+/* When the bar slides away, the metronome slides up into the corner */
+.pf-met { transition: top .2s ease; }
+.pf-bar:not(.show) ~ .pf-met { top: max(12px, env(safe-area-inset-top)); }
+.pf-bar:not(.show) ~ .pf-met::before { display: none; }
 .pf-met.flash { animation: met-flash .18s ease-out; }
 .pf-met.flash1 { animation: met-flash1 .22s ease-out; }
 .pf-met-top { display: flex; align-items: center; justify-content: space-between; }
