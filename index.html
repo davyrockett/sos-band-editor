@@ -52,6 +52,7 @@ applyTheme(savedTheme());
   </div>
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" data-tab="set">Setlist</button>
+    <button type="button" role="tab" data-tab="met">Metronome</button>
     <button type="button" role="tab" data-tab="stage">Stage plot</button>
     <button type="button" role="tab" data-tab="gear">Gear</button>
     <button type="button" role="tab" data-tab="mixer">Mixer</button>
@@ -92,6 +93,48 @@ applyTheme(savedTheme());
     </div>
     <input type="search" class="search editor-only" id="song-search" placeholder="Search songs" aria-label="Search songs">
     <ul class="library editor-only" id="library"></ul>
+  </section>
+
+  <!-- METRONOME -->
+  <section class="panel" id="panel-met" data-panel="met" hidden>
+    <div class="panel-head">
+      <div>
+        <h2>Metronome</h2>
+        <p class="cap">Tap a song below to load its tempo, then Start to count it in.</p>
+      </div>
+      <div class="seg" id="met-mode" role="group" aria-label="Sound or silent">
+        <button type="button" data-silent="0">Sound</button>
+        <button type="button" data-silent="1">Silent (flash)</button>
+      </div>
+    </div>
+    <div class="met-box" id="met-box">
+      <div class="met-song">
+        <button type="button" class="met-step" id="met-prev" aria-label="Previous song">‹</button>
+        <span class="met-song-name" id="met-song">No song picked</span>
+        <button type="button" class="met-step" id="met-next" aria-label="Next song">›</button>
+      </div>
+      <div class="met-bpm"><span id="met-bpm">120</span><small>BPM</small></div>
+      <div class="met-dots" id="met-dots" aria-hidden="true"></div>
+    </div>
+    <div class="met-tempo">
+      <button type="button" class="btn met-pm" id="met-minus" aria-label="Slower">−</button>
+      <input type="range" id="met-slider" min="30" max="260" step="1" aria-label="Tempo">
+      <button type="button" class="btn met-pm" id="met-plus" aria-label="Faster">+</button>
+    </div>
+    <div class="met-row">
+      <div class="seg" id="met-beats" role="group" aria-label="Beats in a bar">
+        <button type="button" data-beats="2">2</button>
+        <button type="button" data-beats="3">3</button>
+        <button type="button" data-beats="4">4</button>
+        <button type="button" data-beats="6">6</button>
+      </div>
+      <button type="button" class="btn" id="met-tap">Tap tempo</button>
+      <button type="button" class="btn primary met-start" id="met-start">Start</button>
+    </div>
+    <h3 class="met-list-h">Tempos for this gig</h3>
+    <p class="cap edit-only">Type each song's tempo. It's saved with the song, so it shows in every gig and in the band app.</p>
+    <div class="setcols" id="met-list"></div>
+    <p class="empty" id="met-empty" hidden>No songs in this set yet.</p>
   </section>
 
   <!-- STAGE PLOT -->
@@ -179,6 +222,7 @@ applyTheme(savedTheme());
       <dl class="facts">
         <div><dt>Lead singer</dt><dd id="sv-lead"></dd></div>
         <div><dt>Key</dt><dd id="sv-key"></dd></div>
+        <div><dt>Tempo</dt><dd id="sv-bpm"></dd></div>
       </dl>
       <p class="sv-notes" id="sv-notes"></p>
       <div class="row-btns">
@@ -195,6 +239,7 @@ applyTheme(savedTheme());
         <label>Lead singer <select id="se-lead"></select></label>
         <label>Key <input id="se-key" placeholder="e.g. A"></label>
       </div>
+      <label>Tempo (BPM) <input id="se-bpm" type="number" inputmode="numeric" min="30" max="260" placeholder="e.g. 96"></label>
       <label>Notes <textarea id="se-notes" rows="3" placeholder="Intro, endings, who cues what…"></textarea></label>
       <div class="chart-field">
         <span class="lbl">Chart (PDF)</span>
@@ -344,7 +389,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v24';
+window.APP_VERSION = 'v25';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

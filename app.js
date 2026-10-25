@@ -18,7 +18,7 @@ const CHART_BASE = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'https
 const EDITOR = document.documentElement.dataset.mode !== 'band';
 // Both apps live on the same site and share browser storage, so their keys must differ.
 const P = EDITOR ? 'sosed.' : 'sos.';
-const K = { data: P + 'data', token: P + 'sync-token', last: P + 'sync-last', tab: P + 'tab', show: P + 'show', theme: P + 'theme' };
+const K = { data: P + 'data', token: P + 'sync-token', last: P + 'sync-last', tab: P + 'tab', show: P + 'show', theme: P + 'theme', met: P + 'met' };
 // The editor's link to the band app shows its address on whichever site this is.
 { const bl = document.getElementById('band-link'); if (bl) bl.textContent = bl.href.replace(/^https?:\/\//, '').replace(/\/$/, ''); }
 
@@ -152,7 +152,7 @@ function render() {
   document.title = s ? `SOS Band · ${s.name}` : 'SOS Band';
   $('show-name').textContent = s ? s.name : (Object.keys(items).length ? 'No gig yet' : 'Loading…');
   $('show-date').textContent = s ? fmtDate(s.date, false) : '';
-  renderSet(s); renderPlot(s, b); renderGear(s); renderMixers(s); renderBand(s);
+  renderSet(s); renderMet(s); renderPlot(s, b); renderGear(s); renderMixers(s); renderBand(s);
 }
 
 /* Setlist */
@@ -762,6 +762,7 @@ function openSong(id) {
   const lead = get(s.lead);
   $('sv-lead').textContent = lead ? lead.name : 'Not set';
   $('sv-key').textContent = s.key || '—';
+  $('sv-bpm').textContent = s.bpm ? `${s.bpm} BPM` : '—';
   $('sv-notes').textContent = s.notes || '';
   $('sv-chart').disabled = !s.chart;
   $('sv-nochart').hidden = Boolean(s.chart);
@@ -777,6 +778,7 @@ function editSong(id) {
   $('se-title').value = s.title;
   $('se-artist').value = s.artist || '';
   $('se-key').value = s.key || '';
+  $('se-bpm').value = s.bpm || '';
   $('se-notes').value = s.notes || '';
   const sel = $('se-lead');
   sel.replaceChildren(new Option('Not set', ''));
@@ -818,7 +820,7 @@ $('song-form').addEventListener('submit', async e => {
   if (!title) return;
   const id = songId || 's-' + slug(title) + (get('s-' + slug(title)) ? '-' + Date.now().toString(36) : '');
   const old = get(id) || {};
-  const rec = { ...old, type: 'song', title, artist: $('se-artist').value.trim(), lead: $('se-lead').value, key: $('se-key').value.trim(), notes: $('se-notes').value.trim(), chart: old.chart || '' };
+  const rec = { ...old, type: 'song', title, artist: $('se-artist').value.trim(), lead: $('se-lead').value, key: $('se-key').value.trim(), bpm: cleanBpm($('se-bpm').value), notes: $('se-notes').value.trim(), chart: old.chart || '' };
   const btn = $('se-save');
   if (pendingChart) {
     btn.disabled = true;
@@ -1186,6 +1188,182 @@ document.querySelectorAll('dialog').forEach(d => {
   d.addEventListener('click', e => { if (e.target === d) d.close(); });
   d.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => d.close()));
 });
+
+/* ---------- Metronome ----------
+   Clicks are scheduled ahead on the Web Audio clock so they stay steady; the flashing follows the same clock.
+   Silent mode schedules no sound, only the flashes. Tempos are saved on each song (song.bpm). */
+const BPM_MIN = 30, BPM_MAX = 260;
+const cleanBpm = v => { const n = Math.round(Number(v)); return n >= BPM_MIN && n <= BPM_MAX ? n : null; };
+const met = Object.assign({ bpm: 120, beats: 4, silent: false, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
+let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null, metTaps = [];
+const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song }));
+// The songs in this gig's set, in order (breaks and notes left out).
+const metSongs = s => (s?.setlist || []).filter(id => !isBreak(id) && !isNote(id) && get(id)).map(get);
+
+function metClick(t, accent) {
+  const o = metCtx.createOscillator(), g = metCtx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(accent ? 1760 : 1175, t);
+  o.frequency.exponentialRampToValueAtTime(accent ? 1100 : 750, t + 0.04);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(accent ? 0.9 : 0.55, t + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+  o.connect(g).connect(metCtx.destination);
+  o.start(t);
+  o.stop(t + 0.07);
+}
+function metSchedule() {
+  while (metNext < metCtx.currentTime + 0.12) {
+    if (!met.silent) metClick(metNext, metBeat === 0 && met.beats > 1);
+    metQueue.push({ t: metNext, beat: metBeat });
+    metNext += 60 / met.bpm;
+    metBeat = (metBeat + 1) % met.beats;
+  }
+}
+function metDraw() {
+  if (!metOn) return;
+  let hit = null;
+  while (metQueue.length && metQueue[0].t <= metCtx.currentTime) hit = metQueue.shift();
+  if (hit) {
+    const box = $('met-box');
+    box.classList.remove('flash', 'flash1');
+    void box.offsetWidth;   // restart the flash animation
+    box.classList.add(hit.beat === 0 && met.beats > 1 ? 'flash1' : 'flash');
+    $('met-dots').querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i === hit.beat));
+  }
+  requestAnimationFrame(metDraw);
+}
+async function metStart() {
+  metCtx = metCtx || new (window.AudioContext || window.webkitAudioContext)();
+  if (metCtx.state !== 'running') await metCtx.resume();
+  metOn = true;
+  metBeat = 0;
+  metQueue = [];
+  metNext = metCtx.currentTime + 0.08;
+  metSchedule();
+  metTimer = setInterval(metSchedule, 25);
+  requestAnimationFrame(metDraw);
+  try { metLock = await navigator.wakeLock?.request('screen'); } catch {}   // keep the screen on while it runs
+  metMarks();
+}
+function metStop() {
+  metOn = false;
+  clearInterval(metTimer);
+  metQueue = [];
+  metLock?.release().catch(() => {});
+  metLock = null;
+  $('met-box').classList.remove('flash', 'flash1');
+  $('met-dots').querySelectorAll('i').forEach(d => d.classList.remove('on'));
+  metMarks();
+}
+function setBpm(v) {
+  const n = Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(v)));
+  if (!n) return;
+  met.bpm = n;
+  saveMet();
+  metMarks();
+}
+// Everything on the metronome screen except the song list.
+function metMarks() {
+  $('met-bpm').textContent = met.bpm;
+  $('met-slider').value = met.bpm;
+  $('met-start').textContent = metOn ? 'Stop' : 'Start';
+  $('met-start').classList.toggle('on', metOn);
+  document.querySelectorAll('#met-mode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.silent === '1') === String(met.silent)));
+  document.querySelectorAll('#met-beats button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.beats) === met.beats));
+  const dots = $('met-dots');
+  if (dots.children.length !== met.beats) dots.replaceChildren(...Array.from({ length: met.beats }, () => el('i')));
+  const list = metSongs(currentShow());
+  const i = list.findIndex(x => x.id === met.song);
+  const song = list[i];
+  $('met-song').textContent = song ? `${i + 1}. ${song.title}` : 'No song picked';
+  $('met-song').classList.toggle('none', !song);
+  $('met-prev').disabled = !list.length || i === 0;
+  $('met-next').disabled = !list.length || i === list.length - 1;
+  document.querySelectorAll('#met-list li[data-id]').forEach(li => li.classList.toggle('cur', li.dataset.id === met.song));
+}
+function pickSong(id) {
+  const song = get(id);
+  if (!song) return;
+  met.song = id;
+  if (song.bpm) setBpm(song.bpm); else { saveMet(); metMarks(); }
+}
+function stepSong(d) {
+  const list = metSongs(currentShow());
+  const i = list.findIndex(x => x.id === met.song);
+  const next = list[i < 0 ? 0 : i + d];
+  if (next) pickSong(next.id);
+}
+function renderMet(s) {
+  const wrap = $('met-list');
+  wrap.replaceChildren();
+  const ids = (s?.setlist || []).filter(inSet).filter(id => !isNote(id));
+  $('met-empty').hidden = ids.some(id => !isBreak(id));
+  let list = el('ol', 'setlist met-songs'), n = 0;
+  ids.forEach(id => {
+    if (isBreak(id)) {
+      if (list.children.length) wrap.append(list);
+      list = el('ol', 'setlist met-songs');
+      return;
+    }
+    const song = get(id);
+    const li = el('li');
+    li.dataset.id = id;
+    li.append(el('span', 'num', ++n));
+    const btn = el('button', 'song-btn');
+    btn.type = 'button';
+    const txt = el('span', 'song-txt');
+    txt.append(el('span', 'song-title', song.title), el('span', 'song-artist', song.artist || ''));
+    btn.append(txt);
+    btn.addEventListener('click', () => pickSong(id));
+    li.append(btn);
+    if (canEdit()) {
+      const inp = el('input', 'bpm-input');
+      inp.type = 'number';
+      inp.inputMode = 'numeric';
+      inp.min = BPM_MIN; inp.max = BPM_MAX;
+      inp.placeholder = 'BPM';
+      inp.value = song.bpm || '';
+      inp.setAttribute('aria-label', `Tempo of ${song.title}`);
+      inp.addEventListener('change', () => {
+        const bpm = cleanBpm(inp.value);
+        if (inp.value && !bpm) { inp.value = song.bpm || ''; toast(`Tempos go from ${BPM_MIN} to ${BPM_MAX} BPM.`); return; }
+        put(id, { ...get(id), bpm });
+        if (met.song === id && bpm) setBpm(bpm);
+      });
+      li.append(inp);
+    } else {
+      li.append(el('span', 'bpm-tag' + (song.bpm ? '' : ' none'), song.bpm ? `${song.bpm}` : '—'));
+    }
+    list.append(li);
+  });
+  if (list.children.length) wrap.append(list);
+  wrap.classList.toggle('multi', wrap.children.length > 1);
+  metMarks();
+}
+$('met-start').addEventListener('click', () => (metOn ? metStop() : metStart()));
+$('met-minus').addEventListener('click', () => setBpm(met.bpm - 1));
+$('met-plus').addEventListener('click', () => setBpm(met.bpm + 1));
+$('met-slider').addEventListener('input', e => setBpm(Number(e.target.value)));
+$('met-prev').addEventListener('click', () => stepSong(-1));
+$('met-next').addEventListener('click', () => stepSong(1));
+document.querySelectorAll('#met-mode button').forEach(b => b.addEventListener('click', () => { met.silent = b.dataset.silent === '1'; saveMet(); metMarks(); }));
+document.querySelectorAll('#met-beats button').forEach(b => b.addEventListener('click', () => {
+  met.beats = Number(b.dataset.beats);
+  metBeat = 0;
+  saveMet();
+  metMarks();
+}));
+// Tap tempo: the average of the last few taps; a pause of 2 seconds starts over.
+$('met-tap').addEventListener('click', () => {
+  const now = performance.now();
+  if (metTaps.length && now - metTaps[metTaps.length - 1] > 2000) metTaps = [];
+  metTaps = [...metTaps, now].slice(-6);
+  if (metTaps.length > 1) setBpm(60000 / ((metTaps[metTaps.length - 1] - metTaps[0]) / (metTaps.length - 1)));
+});
+// Leaving the app stops it, so it never keeps clicking in a pocket.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && metOn) metStop(); });
+metMarks();
 
 /* ---------- Toast ---------- */
 let toastTimer;
