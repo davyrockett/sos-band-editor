@@ -72,6 +72,7 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
   A = instruments, its main out in stereo into B ch 7–8, B = vocals + master. Data: `show.mix` (`setup`, `ch` = channel → input,
   `off` = inputs left off, `out`); unsaved channels fill in stage order, left to right, vocals first; any change saves the whole
   layout so channels stay put. The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
+  The Gear tab's PA section adds the mixers, their power cables and (two mixers) the A → B stereo cables from the setup (`mixerGear`).
 Gigs ("shows" in the code/data): the picker in the header lists them, upcoming first. Band members can switch
 gigs too; the band app opens on the one David marks with **★ Make the band app open on this gig** (`band.currentShow`).
 At the moment: Ionis Event (Nov 4 2026), Living Your Dreams (Nov 7 2026, ★, the one being prepared) and The Midway;

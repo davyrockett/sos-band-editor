@@ -431,6 +431,17 @@ function gearTotals(s) {
   const rank = i => { const n = GEAR_ORDER.indexOf(i); return n < 0 ? 99 : n; };
   return rows.sort((a, b) => rank(a.item) - rank(b.item) || a.item.localeCompare(b.item));
 }
+// The mixers and their cables follow the setup on the Mixer page.
+function mixerGear(s) {
+  return s.mix?.setup === 'two' ? [
+    { item: 'Mackie Mixer (8-ch)', how: 'A: instruments, B: vocals + master', qty: 2 },
+    { item: 'Power Cables (Mixers)', how: '1 per mixer', qty: 2 },
+    { item: 'Cables (Mixer A → Mixer B ch 7–8)', how: 'Stereo submix, L + R', qty: 2 },
+  ] : [
+    { item: 'Mixer (10-ch)', how: '', qty: 1 },
+    { item: 'Power Cable (Mixer)', how: '', qty: 1 },
+  ];
+}
 function renderGear(s) {
   const box = $('gear');
   box.replaceChildren();
@@ -450,12 +461,19 @@ function renderGear(s) {
   const extras = s.extras || [];
   const sections = [...new Set(extras.map(x => x.section || 'Band'))];
   if (!sections.includes('Band')) sections.unshift('Band');
+  if (!sections.includes('PA')) sections.push('PA');
   for (const sec of sections) {
     if (sec !== 'Band') {
       const tr = el('tr', 'sec');
       const th = el('th', null, sec === 'PA' ? 'PA system' : sec);
       th.colSpan = canEdit() ? 4 : 3;
       tr.append(th);
+      t.append(tr);
+    }
+    if (sec === 'PA') for (const r of mixerGear(s)) {
+      const tr = el('tr', 'auto');
+      tr.append(el('td', null, r.item), el('td', 'how', r.how), el('td', 'q', r.qty));
+      if (canEdit()) tr.append(el('td', 'x'));
       t.append(tr);
     }
     extras.forEach((x, i) => {

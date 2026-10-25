@@ -123,7 +123,7 @@ applyTheme(savedTheme());
     <div class="panel-head">
       <div>
         <h2>Gear to bring</h2>
-        <p class="cap">Worked out from what each player on the stage plot needs, plus the extras below.</p>
+        <p class="cap">Worked out from what each player on the stage plot needs, the mixers set on the Mixer page, and the extras below.</p>
       </div>
       <div class="head-btns"><button type="button" class="btn" data-print>Print</button></div>
     </div>
@@ -344,7 +344,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v22';
+window.APP_VERSION = 'v23';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
