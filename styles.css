@@ -241,6 +241,7 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .mixer .out { margin: 10px 0 0; font-size: 15px; }
 .mixer .out b { color: var(--accent-ink); }
 .mixer-edit { display: grid; gap: 8px; margin-bottom: 10px; }
+.mixer-edit select { min-height: 40px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--bg); width: 100%; }
 .mixer-edit input { min-height: 40px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--bg); width: 100%; }
 .mixer li .pick { flex: 1; min-width: 0; display: grid; gap: 6px; }
 .mixer li select { width: 100%; min-height: 36px; border: 1px solid var(--line); border-left: 5px solid var(--kc, var(--line)); border-radius: 6px; padding: 4px 8px; background: var(--bg); }

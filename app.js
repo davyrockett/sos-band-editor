@@ -35,7 +35,7 @@ const KINDS = [
 const kindOf = k => KINDS.find(x => x.key === k) || KINDS[KINDS.length - 1];
 // The order gear appears in the totals table; anything else goes after, A–Z.
 const GEAR_ORDER = ['Music Stand', 'Mic Stand', 'Mic', 'Guitar Stand', 'DI Box', 'XLR Cable', '1/4" Cable', 'Bass Amp',
-  'E. Guitar Amp', 'Keyboard Stand', 'Pedalboard', 'Drum Kit', 'Monitor'];
+  'E. Guitar Amp', 'Keyboard Stand', 'Pedalboard', 'Drum Kit'];
 
 const $ = id => document.getElementById(id);
 function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -441,14 +441,15 @@ function gearTotals(s) {
   const rank = i => { const n = GEAR_ORDER.indexOf(i); return n < 0 ? 99 : n; };
   return rows.sort((a, b) => rank(a.item) - rank(b.item) || a.item.localeCompare(b.item));
 }
-// Stage monitors: anyone with "Monitor" in their gear gets one.
-const monitorCount = s => (s.lineup || []).reduce((t, l) => t + (get(l.member)?.gear || []).filter(g => g.item === 'Monitor').reduce((n, g) => n + (g.qty || 1), 0), 0);
-// The mixers and their cables follow the setup on the Mixer page; each monitor adds its power and signal cables.
+// Stage monitors: none, 1 or 2, picked on the Mixer page (not per player).
+const monitorCount = s => Math.min(2, Math.max(0, Number(s.mix?.monitors) || 0));
+// The mixers and their cables follow the setup on the Mixer page; each monitor adds itself and its two cables.
 function mixerGear(s) {
-  const n = monitorCount(s);
+  const n = monitorCount(s), how = n > 1 ? 'For the stage monitors' : 'For the stage monitor';
   const mon = n ? [
-    { item: 'Power Cables (Monitors)', how: '1 per monitor', qty: n },
-    { item: 'Long XLR (Mixer → Monitor)', how: '1 per monitor, from the monitor send', qty: n },
+    { item: 'Stage Monitor', how: '', qty: n },
+    { item: 'Power Cable', how, qty: n },
+    { item: '1/4" Cable', how, qty: n },
   ] : [];
   return [...mixerBoxes(s), ...mon];
 }
@@ -607,8 +608,6 @@ function mixLayout(s) {
     twice: inputs.filter(i => where(i.key).length > 1),
     full: slots.every(c => at[c]),
     out: mix.out ?? ((s.mixers || []).at(-1)?.out || 'Main out L/R → PA speakers'),
-    // The monitor send, on the mixer that has the vocals (B when there are two).
-    mon: mix.mon ?? (monitorCount(s) ? `Aux 1 → ${monitorCount(s) > 1 ? `${monitorCount(s)} monitors` : 'monitor'}` : ''),
   };
 }
 // Which channels each player is on, for the stage plot.
@@ -700,23 +699,28 @@ function renderMixers(s) {
     const master = !(L.setup === 'two' && mx.id === 'A');
     if (master && edit) {
       const ow = el('div', 'mixer-edit out-edit');
-      for (const [key, name, hint] of [['out', 'Main out', 'Main out goes to…'], ['mon', 'Monitor', 'e.g. Aux 1 → monitor (blank if none)']]) {
-        const lab = el('label', 'out-lbl');
-        const inp = el('input');
-        inp.value = L[key];
-        inp.placeholder = hint;
-        inp.addEventListener('change', () => patchShow(v => { v.mix = { ...(v.mix || {}), [key]: inp.value.trim() }; }));
-        lab.append(el('b', null, name), inp);
-        ow.append(lab);
-      }
+      const lab = el('label', 'out-lbl');
+      const inp = el('input');
+      inp.value = L.out;
+      inp.placeholder = 'Main out goes to…';
+      inp.addEventListener('change', () => patchShow(v => { v.mix = { ...(v.mix || {}), out: inp.value.trim() }; }));
+      lab.append(el('b', null, 'Main out'), inp);
+      // Stage monitors: each one adds a monitor, a power cable and a 1/4" cable to the Gear list.
+      const mlab = el('label', 'out-lbl');
+      const sel = el('select');
+      ['No monitor', '1 monitor', '2 monitors'].forEach((t, n) => sel.append(new Option(t, n)));
+      sel.value = monitorCount(s);
+      sel.addEventListener('change', () => patchShow(v => { v.mix = { ...(v.mix || {}), monitors: Number(sel.value) }; }));
+      mlab.append(el('b', null, 'Monitor'), sel);
+      ow.append(lab, mlab);
       card.append(ow);
     } else {
       const p = el('p', 'out');
       p.append(el('b', null, 'Out: '), master ? L.out : 'Main out L/R → Mixer B ch 7–8 (stereo, 2 cables)');
       card.append(p);
-      if (master && L.mon) {
+      if (master && monitorCount(s)) {
         const m = el('p', 'out');
-        m.append(el('b', null, 'Monitor: '), L.mon);
+        m.append(el('b', null, 'Monitor: '), monitorCount(s) > 1 ? '2 stage monitors' : '1 stage monitor');
         card.append(m);
       }
     }
