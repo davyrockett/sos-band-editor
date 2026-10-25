@@ -1195,7 +1195,7 @@ document.querySelectorAll('dialog').forEach(d => {
 const BPM_MIN = 30, BPM_MAX = 260;
 const cleanBpm = v => { const n = Math.round(Number(v)); return n >= BPM_MIN && n <= BPM_MAX ? n : null; };
 const met = Object.assign({ bpm: 120, beats: 4, silent: false, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
-let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null, metTaps = [];
+let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null;
 const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song }));
 // The songs in this gig's set, in order (breaks and notes left out).
 const metSongs = s => (s?.setlist || []).filter(id => !isBreak(id) && !isNote(id) && get(id)).map(get);
@@ -1355,12 +1355,22 @@ document.querySelectorAll('#met-beats button').forEach(b => b.addEventListener('
   metMarks();
 }));
 // Tap tempo: the average of the last few taps; a pause of 2 seconds starts over.
-$('met-tap').addEventListener('click', () => {
-  const now = performance.now();
-  if (metTaps.length && now - metTaps[metTaps.length - 1] > 2000) metTaps = [];
-  metTaps = [...metTaps, now].slice(-6);
-  if (metTaps.length > 1) setBpm(60000 / ((metTaps[metTaps.length - 1] - metTaps[0]) / (metTaps.length - 1)));
-});
+// Taps count on touch-down (not on release) so they land on the beat.
+function tapTempo(btn, onBpm) {
+  let taps = [];
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const now = performance.now();
+    if (taps.length && now - taps[taps.length - 1] > 2000) taps = [];
+    taps = [...taps, now].slice(-6);
+    btn.classList.remove('tapped');
+    void btn.offsetWidth;
+    btn.classList.add('tapped');
+    if (taps.length > 1) onBpm(Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1))))));
+  });
+}
+tapTempo($('met-tap'), setBpm);
+tapTempo($('se-tap'), bpm => { $('se-bpm').value = bpm; });
 // Leaving the app stops it, so it never keeps clicking in a pocket.
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && metOn) metStop(); });
 metMarks();

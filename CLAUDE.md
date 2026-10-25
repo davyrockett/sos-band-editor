@@ -105,7 +105,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
 - **Metronome** (since 2026-10-25, David): its own tab. Tempo is saved on the song (`song.bpm`, 30–260), typed in the
   tab's list of this gig's songs (editor) or in Edit song; the band app shows them read-only. Tap a song or ‹ › to load
   its tempo. Sound | Silent (flash) (David asked for a silent mode that just flashes); beats 2/3/4/6, beat 1 accented;
-  tap tempo; Web Audio lookahead scheduling, flashes follow the audio clock; screen wake lock while running; stops when
+  tap tempo (also beside the tempo box in Edit song, David 2026-10-25); Web Audio lookahead scheduling, flashes follow the audio clock; screen wake lock while running; stops when
   the app is hidden. Metronome settings are per device (`sos.met` / `sosed.met`). David said "style it like this" but
   no picture came through; it uses the app's own style for now.
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.

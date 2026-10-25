@@ -239,7 +239,11 @@ applyTheme(savedTheme());
         <label>Lead singer <select id="se-lead"></select></label>
         <label>Key <input id="se-key" placeholder="e.g. A"></label>
       </div>
-      <label>Tempo (BPM) <input id="se-bpm" type="number" inputmode="numeric" min="30" max="260" placeholder="e.g. 96"></label>
+      <label for="se-bpm">Tempo (BPM)</label>
+      <div class="bpm-row">
+        <input id="se-bpm" type="number" inputmode="numeric" min="30" max="260" placeholder="e.g. 96">
+        <button type="button" class="btn" id="se-tap">Tap tempo</button>
+      </div>
       <label>Notes <textarea id="se-notes" rows="3" placeholder="Intro, endings, who cues what…"></textarea></label>
       <div class="chart-field">
         <span class="lbl">Chart (PDF)</span>
@@ -389,7 +393,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v25';
+window.APP_VERSION = 'v26';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
