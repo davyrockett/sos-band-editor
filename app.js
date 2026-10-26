@@ -1287,10 +1287,11 @@ function metDraw() {
   let hit = null;
   while (metQueue.length && metQueue[0].t <= metCtx.currentTime) hit = metQueue.shift();
   if (hit) {
-    for (const box of [$('met-box'), $('pf-met')]) {
+    // Only beat 1 of each bar flashes (David); the beat lights still step every beat.
+    if (hit.beat === 0) for (const box of [$('met-box'), $('pf-met')]) {
       box.classList.remove('flash', 'flash1');
       void box.offsetWidth;   // restart the flash animation
-      box.classList.add(hit.beat === 0 && met.beats > 1 ? 'flash1' : 'flash');
+      box.classList.add('flash1');
     }
     document.querySelectorAll('#met-dots i, #pf-dots i').forEach(d => d.classList.toggle('on', d.dataset.n == hit.beat));
   }
