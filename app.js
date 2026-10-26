@@ -11,8 +11,8 @@
 const DATA_REPO = 'davyrockett/sos-band-data';
 const DATA_FILE = 'data.json';
 // Published data and charts, on the same site as the app (works on davyrockett.github.io and davyrockett.com).
-const CHART_BASE = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'https://davyrockett.github.io/sos-band-data/'
-  : `${location.origin}/sos-band-data/`;
+// Testing locally (serving the Claude Apps folder), that's the Mac's backup copy of sos-band-data.
+const CHART_BASE = `${location.origin}/sos-band-data/`;
 // Two apps share this code: David's editor (sos-band-editor) and the band's view-only app (sos-band).
 // tools/publish-band-app.sh copies it into the band app with data-mode="band".
 const EDITOR = document.documentElement.dataset.mode !== 'band';
@@ -1075,12 +1075,11 @@ window.addEventListener('afterprint', () => {
   $('print-pdf').replaceChildren();
 });
 
-// Save the set's charts on this device so they open at a gig with no signal.
+// Save every chart on this device (this gig's set first) so they open instantly, even at a gig with no signal.
 async function keepChartsOffline() {
   if (!navigator.onLine || !('caches' in window)) return;
-  const s = currentShow();
-  for (const id of s?.setlist || []) {
-    const song = get(id);
+  const list = [...metSongs(currentShow()), ...songs()];
+  for (const song of new Set(list)) {
     if (!song?.chart) continue;
     try {
       const cache = await caches.open('sos-charts');
@@ -1255,15 +1254,9 @@ document.querySelectorAll('dialog').forEach(d => {
 const pf = { silent: true, songs: [], i: 0, page: 1, docs: new Map(), cache: new Map(), lock: null, token: 0, barTimer: null };
 const BPM_MIN = 30, BPM_MAX = 260;
 const cleanBpm = v => { const n = Math.round(Number(v)); return n >= BPM_MIN && n <= BPM_MAX ? n : null; };
-const LAG_MAX = 500;
-const met = Object.assign({ bpm: 120, beats: 4, silent: true, song: null, lag: 0 }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
+const met = Object.assign({ bpm: 120, beats: 4, silent: true, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
 let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null;
-const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song, lag: met.lag }));
-// Perform's little metronome has its own Silent switch (on each time Perform opens).
-const metSound = () => !($('perform').hidden ? met.silent : pf.silent);
-// The speaker plays each click a little after its scheduled time (much later on Bluetooth). With the sound on,
-// the flashes wait the same time: what the browser reports, plus the Flash delay set on the metronome screen.
-const metLag = () => metSound() ? (metCtx.outputLatency || 0) + (metCtx.baseLatency || 0) + met.lag / 1000 : 0;
+const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song }));
 // The songs in this gig's set, in order (breaks and notes left out).
 const metSongs = s => (s?.setlist || []).filter(id => !isBreak(id) && !isNote(id) && get(id)).map(get);
 
@@ -1280,8 +1273,15 @@ function metClick(t, accent) {
   o.stop(t + 0.07);
 }
 function metSchedule() {
+  // If the page was too busy to schedule in time (an iPad drawing a chart in Perform), skip the beats already
+  // missed instead of playing them all at once, which put the high click on beat 2 or 3 (David, 2026-10-25).
+  while (metNext < metCtx.currentTime) {
+    metNext += 60 / met.bpm;
+    metBeat = (metBeat + 1) % met.beats;
+  }
   while (metNext < metCtx.currentTime + 0.12) {
-    if (metSound()) metClick(metNext, metBeat === 0 && met.beats > 1);
+    // Perform's little metronome has its own Silent switch (on each time Perform opens).
+    if (!($('perform').hidden ? met.silent : pf.silent)) metClick(metNext, metBeat === 0 && met.beats > 1);
     metQueue.push({ t: metNext, beat: metBeat });
     metNext += 60 / met.bpm;
     metBeat = (metBeat + 1) % met.beats;
@@ -1290,8 +1290,7 @@ function metSchedule() {
 function metDraw() {
   if (!metOn) return;
   let hit = null;
-  const now = metCtx.currentTime - metLag();
-  while (metQueue.length && metQueue[0].t <= now) hit = metQueue.shift();
+  while (metQueue.length && metQueue[0].t <= metCtx.currentTime) hit = metQueue.shift();
   if (hit) {
     // Only beat 1 of each bar flashes (David); the beat lights still step every beat.
     if (hit.beat === 0) for (const box of [$('met-box'), $('pf-met')]) {
@@ -1338,9 +1337,6 @@ function setBpm(v) {
 function metMarks() {
   $('met-bpm').textContent = met.bpm;
   $('met-slider').value = met.bpm;
-  $('met-lag').textContent = `${met.lag} ms`;
-  $('met-lag-minus').disabled = met.lag <= 0;
-  $('met-lag-plus').disabled = met.lag >= LAG_MAX;
   $('met-start').textContent = metOn ? 'Stop' : 'Start';
   $('met-start').classList.toggle('on', metOn);
   $('pf-bpm').textContent = met.bpm;
@@ -1425,8 +1421,6 @@ $('met-plus').addEventListener('click', () => setBpm(met.bpm + 1));
 $('met-slider').addEventListener('input', e => setBpm(Number(e.target.value)));
 $('met-prev').addEventListener('click', () => stepSong(-1));
 $('met-next').addEventListener('click', () => stepSong(1));
-for (const [btn, d] of [['met-lag-minus', -10], ['met-lag-plus', 10]])
-  $(btn).addEventListener('click', () => { met.lag = Math.min(LAG_MAX, Math.max(0, met.lag + d)); saveMet(); metMarks(); });
 document.querySelectorAll('#met-mode button').forEach(b => b.addEventListener('click', () => { met.silent = b.dataset.silent === '1'; saveMet(); metMarks(); }));
 document.querySelectorAll('#met-beats button').forEach(b => b.addEventListener('click', () => {
   met.beats = Number(b.dataset.beats);
@@ -1477,6 +1471,15 @@ function pfDoc(song) {
   })().catch(() => { pf.docs.delete(song.id); return 'failed'; }));
   return pf.docs.get(song.id);
 }
+// Let go of drawn pages (all, or the oldest beyond the last 5). iPad Safari has little room for drawn pages and
+// slows right down when it runs out, so a forgotten page is emptied straight away instead of waiting to be cleaned up.
+function pfForget(keep = 0) {
+  while (pf.cache.size > keep) {
+    const [k, job] = pf.cache.entries().next().value;
+    pf.cache.delete(k);
+    job.then(c => { if (!c.isConnected) c.width = c.height = 0; }).catch(() => {});
+  }
+}
 // One page drawn as big as fits the screen (sharp on Retina screens). Kept for a moment so turning back is instant.
 async function pfDraw(doc, n, key) {
   const box = $('pf-stage'), W = box.clientWidth, H = box.clientHeight, k = `${key}:${n}:${W}x${H}`;
@@ -1493,7 +1496,7 @@ async function pfDraw(doc, n, key) {
     return c;
   })();
   pf.cache.set(k, job);
-  while (pf.cache.size > 8) pf.cache.delete(pf.cache.keys().next().value);
+  pfForget(5);
   return job;
 }
 async function pfShow() {
@@ -1552,7 +1555,7 @@ function openPerform() {
   if (!pf.songs.length) { toast('No songs in this set yet.'); return; }
   const sel = $('pf-song');
   sel.replaceChildren(...pf.songs.map((x, n) => new Option(`${n + 1}. ${x.title}${x.bpm ? ` · ${x.bpm}` : ''}`, x.id)));
-  pf.i = 0; pf.page = 1; pf.cache.clear();
+  pf.i = 0; pf.page = 1; pfForget();
   pf.silent = true;   // on stage the little metronome starts silent (David)
   const v = $('perform');
   v.hidden = false;
@@ -1561,6 +1564,9 @@ function openPerform() {
   if (history.state?.perform !== true) history.pushState({ perform: true }, '');
   pfWake();
   pfShow();
+  // Open the rest of the set's charts in the background, one at a time, so no song waits when you get to it.
+  const t = pf.token;
+  (async () => { for (const song of pf.songs) { if (pf.token < t || $('perform').hidden) return; await pfDoc(song); } })();
   pfBar(true);
   pf.barTimer = setTimeout(() => pfBar(false), 3500);
 }
@@ -1573,8 +1579,8 @@ function closePerform(fromHistory = false) {
   pf.lock?.release().catch(() => {});
   pf.lock = null;
   pf.token++;
-  pf.cache.clear();
   $('pf-page').replaceChildren();
+  pfForget();
   if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
   if (!fromHistory && history.state?.perform) history.back();
 }
@@ -1598,7 +1604,7 @@ document.addEventListener('keydown', e => {
   else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); pfStep(-1); }
   else if (e.key === 'Escape') closePerform();
 });
-window.addEventListener('resize', () => { if (!$('perform').hidden) { pf.cache.clear(); pfShow(); } });
+window.addEventListener('resize', () => { if (!$('perform').hidden) { pfForget(); pfShow(); } });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !$('perform').hidden) pfWake(); });
 // The little metronome in the corner: the song's tempo is already set, so Start counts it in.
 $('pf-met-open').addEventListener('click', () => { metMarks(); $('pf-met').hidden = !$('pf-met').hidden; });

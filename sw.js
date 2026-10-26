@@ -2,7 +2,7 @@
 //
 // IMPORTANT: whenever any file below changes, bump VERSION (tools/bump.sh).
 // That is how phones and iPads learn there's an update to download.
-const VERSION = 'v36';
+const VERSION = 'v37';
 // The editor and the band app share this file; name the cache after the app's folder so they don't clear each other's.
 const NAME = new URL(self.registration.scope).pathname.split('/').filter(Boolean).pop() || 'sos';
 const CACHE = `${NAME}-${VERSION}`;
@@ -72,13 +72,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Chord charts: get the latest when online, fall back to the saved copy.
+  // Chord charts: the saved copy first, so Perform turns pages without waiting on the gig's Wi-Fi. A changed chart
+  // has a new address (?v=…), so it's downloaded once and saved. No signal and no exact copy: any saved copy of it.
   if (url.pathname.startsWith('/sos-band-data/charts/')) {
     event.respondWith(
       caches.open(CHARTS).then((cache) =>
-        fetch(request)
+        cache.match(request).then((saved) => saved || fetch(request)
           .then((res) => { if (res.ok) cache.put(request, res.clone()); return res; })
-          .catch(() => cache.match(request, { ignoreSearch: true }).then((hit) => hit || Response.error()))
+          .catch(() => cache.match(request, { ignoreSearch: true }).then((hit) => hit || Response.error())))
       )
     );
     return;

@@ -136,15 +136,6 @@ applyTheme(savedTheme());
       <button type="button" class="btn" id="met-tap">Tap tempo</button>
       <button type="button" class="btn primary met-start" id="met-start">Start</button>
     </div>
-    <div class="met-lag-box">
-      <div class="met-lag-row">
-        <span class="met-lag-label">Flash delay</span>
-        <button type="button" class="btn met-pm" id="met-lag-minus" aria-label="Less flash delay">−</button>
-        <span class="met-lag" id="met-lag">0 ms</span>
-        <button type="button" class="btn met-pm" id="met-lag-plus" aria-label="More flash delay">+</button>
-      </div>
-      <p class="cap">With the sound on, the flash waits for the click. If it still comes first (Bluetooth speakers), add delay until they line up. Saved on this device.</p>
-    </div>
     <h3 class="met-list-h">Tempos for this gig</h3>
     <p class="cap edit-only">Type each song's tempo. It's saved with the song, so it shows in every gig and in the band app.</p>
     <div class="setcols" id="met-list"></div>
@@ -451,7 +442,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v36';
+window.APP_VERSION = 'v37';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

@@ -92,6 +92,8 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   Never edit files in the sos-band repo directly (except its README/CLAUDE.md/manifest); they get overwritten.
 - **Test locally:** serve the whole `Claude Apps` folder (e.g. `python3 -m http.server 8770` there) and open
   /sos-band-editor/ (and /sos-band/ after copying). The service worker caches files: unregister it, or bump, to see changes.
+  Locally the data and charts come from the Mac's backup clone `../sos-band-data` (`CHART_BASE` = this site's
+  /sos-band-data/) when the GitHub API refuses (it limits to 60 reads an hour), so Perform can be tested with the real set.
 - **Data:** the PUBLIC repo davyrockett/sos-band-data: `data.json` (`{app, format, items}`; each record has `type`
   member/song/show/band and `updatedAt`; deletions are `{deleted:true}`; newest edit wins; `band.currentShow` = the
   show the band app shows) and `charts/*.pdf`, served by GitHub Pages at www.davyrockett.com/sos-band-data/.
@@ -108,8 +110,11 @@ the two November gigs started as copies of the Midway info (David: "same info fo
 - **Metronome** (since 2026-10-25, David): a section (`#panel-met`, tab `met`) opened by the metronome icon beside the gear, NOT a button with the other section titles (David). The icon lights up while it is open; tapping it again goes back to the last section. (v27 tried a pop-up; David preferred the section.) The page is centred (David). Phones on their side
   (landscape, ≤520px tall): tempo box left; right: tempo slider, beats + Tap tempo, Sound/Silent + Start, all on one screen (David). Tempo is saved on the song (`song.bpm`, 30–260), typed in the
   tab's list of this gig's songs (editor) or in Edit song; the band app shows them read-only. Tap a song or ‹ › to load
-  its tempo. Sound | Silent (flash) (David asked for a silent mode that just flashes); beats 2/3/4/6, beat 1 accented; only beat 1 of each bar flashes (the beat lights still step every beat; David 2026-10-25); with the sound on the flashes wait for the speaker (`metLag()`: the browser's outputLatency + baseLatency + the per-device "Flash delay" `met.lag`, 0–500 ms, set on the metronome screen) because David found Perform's flash ahead of the click;
-  tap tempo (also beside the tempo box in Edit song, David 2026-10-25); Web Audio lookahead scheduling, flashes follow the audio clock; screen wake lock while running; stops when
+  its tempo. Sound | Silent (flash) (David asked for a silent mode that just flashes); beats 2/3/4/6, beat 1 accented; only beat 1 of each bar flashes (the beat lights still step every beat; David 2026-10-25);
+  tap tempo (also beside the tempo box in Edit song, David 2026-10-25); Web Audio lookahead scheduling, flashes follow the audio clock; screen wake lock while running; when
+  the page is too busy to schedule in time (an iPad drawing a chart), `metSchedule()` SKIPS the missed beats: playing them late
+  bunched them up and put the high click on beat 2 or 3 (David's iPad, 2026-10-25). v36 tried delaying the flash for the
+  speaker's latency plus a "Flash delay" setting; it was WAY off on David's iPad and wasn't the problem — reverted in v37, don't retry; stops when
   the app is hidden. Metronome settings are per device (`sos.met` / `sosed.met`); it starts in Silent until changed (David). David said "style it like this" but
   no picture came through; it uses the app's own style for now.
 - **Perform** (2026-10-25, David): Setlist's Perform button (both apps) opens the gig's charts full screen (`#perform`,
@@ -120,6 +125,11 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   the top right, just under the icon with a pointer to it (David), sliding up into the corner when the bar hides (BPM, song name, beat lights, − + Tap Silent, Start; flashes like the big one; SILENT each time
   Perform opens, its own switch `pf.silent`, David) that follows the song on screen (`pickSong`);
   closing it or Perform stops it.
+  **Speed** (v37, David: page turns too slow on iPad, "make everything downloaded to device"): the service worker serves
+  charts from the device first (`sos-charts`; a changed chart has a new `?v=` address so it's fetched once);
+  `keepChartsOffline()` saves EVERY song's chart (this gig's set first) after each sync; Perform opens all the set's PDFs in the
+  background on open and draws the next page ahead; only 5 drawn pages are kept and dropped ones are emptied (`pfForget`),
+  because iPad Safari slows right down when drawn pages fill its canvas memory.
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
 - Charts open in an in-app full-screen viewer (Close / Download / Print; on phones one Save / Print button = share sheet),
