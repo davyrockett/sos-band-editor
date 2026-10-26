@@ -144,6 +144,11 @@ body.editing .break-label { padding-left: 76px; }
 .met-row .seg button { padding: 8px 14px; }
 .met-start { margin-left: auto; min-width: 110px; font-size: 18px; }
 .met-start.on { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.met-lag-box { margin-top: 16px; }
+.met-lag-row { display: flex; align-items: center; gap: 10px; }
+.met-lag-label { font-weight: 700; margin-right: auto; }
+.met-lag { min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+.met-lag-box .cap { margin: 6px 0 0; }
 .met-list-h { margin: 26px 0 0; }
 #met-list { margin-top: 10px; grid-template-columns: minmax(0, 620px); }
 #met-list.multi { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }

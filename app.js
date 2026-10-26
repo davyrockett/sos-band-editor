@@ -1255,9 +1255,15 @@ document.querySelectorAll('dialog').forEach(d => {
 const pf = { silent: true, songs: [], i: 0, page: 1, docs: new Map(), cache: new Map(), lock: null, token: 0, barTimer: null };
 const BPM_MIN = 30, BPM_MAX = 260;
 const cleanBpm = v => { const n = Math.round(Number(v)); return n >= BPM_MIN && n <= BPM_MAX ? n : null; };
-const met = Object.assign({ bpm: 120, beats: 4, silent: true, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
+const LAG_MAX = 500;
+const met = Object.assign({ bpm: 120, beats: 4, silent: true, song: null, lag: 0 }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
 let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null;
-const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song }));
+const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song, lag: met.lag }));
+// Perform's little metronome has its own Silent switch (on each time Perform opens).
+const metSound = () => !($('perform').hidden ? met.silent : pf.silent);
+// The speaker plays each click a little after its scheduled time (much later on Bluetooth). With the sound on,
+// the flashes wait the same time: what the browser reports, plus the Flash delay set on the metronome screen.
+const metLag = () => metSound() ? (metCtx.outputLatency || 0) + (metCtx.baseLatency || 0) + met.lag / 1000 : 0;
 // The songs in this gig's set, in order (breaks and notes left out).
 const metSongs = s => (s?.setlist || []).filter(id => !isBreak(id) && !isNote(id) && get(id)).map(get);
 
@@ -1275,8 +1281,7 @@ function metClick(t, accent) {
 }
 function metSchedule() {
   while (metNext < metCtx.currentTime + 0.12) {
-    // Perform's little metronome has its own Silent switch (on each time Perform opens).
-    if (!($('perform').hidden ? met.silent : pf.silent)) metClick(metNext, metBeat === 0 && met.beats > 1);
+    if (metSound()) metClick(metNext, metBeat === 0 && met.beats > 1);
     metQueue.push({ t: metNext, beat: metBeat });
     metNext += 60 / met.bpm;
     metBeat = (metBeat + 1) % met.beats;
@@ -1285,7 +1290,8 @@ function metSchedule() {
 function metDraw() {
   if (!metOn) return;
   let hit = null;
-  while (metQueue.length && metQueue[0].t <= metCtx.currentTime) hit = metQueue.shift();
+  const now = metCtx.currentTime - metLag();
+  while (metQueue.length && metQueue[0].t <= now) hit = metQueue.shift();
   if (hit) {
     // Only beat 1 of each bar flashes (David); the beat lights still step every beat.
     if (hit.beat === 0) for (const box of [$('met-box'), $('pf-met')]) {
@@ -1332,6 +1338,9 @@ function setBpm(v) {
 function metMarks() {
   $('met-bpm').textContent = met.bpm;
   $('met-slider').value = met.bpm;
+  $('met-lag').textContent = `${met.lag} ms`;
+  $('met-lag-minus').disabled = met.lag <= 0;
+  $('met-lag-plus').disabled = met.lag >= LAG_MAX;
   $('met-start').textContent = metOn ? 'Stop' : 'Start';
   $('met-start').classList.toggle('on', metOn);
   $('pf-bpm').textContent = met.bpm;
@@ -1416,6 +1425,8 @@ $('met-plus').addEventListener('click', () => setBpm(met.bpm + 1));
 $('met-slider').addEventListener('input', e => setBpm(Number(e.target.value)));
 $('met-prev').addEventListener('click', () => stepSong(-1));
 $('met-next').addEventListener('click', () => stepSong(1));
+for (const [btn, d] of [['met-lag-minus', -10], ['met-lag-plus', 10]])
+  $(btn).addEventListener('click', () => { met.lag = Math.min(LAG_MAX, Math.max(0, met.lag + d)); saveMet(); metMarks(); });
 document.querySelectorAll('#met-mode button').forEach(b => b.addEventListener('click', () => { met.silent = b.dataset.silent === '1'; saveMet(); metMarks(); }));
 document.querySelectorAll('#met-beats button').forEach(b => b.addEventListener('click', () => {
   met.beats = Number(b.dataset.beats);
