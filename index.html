@@ -325,7 +325,10 @@ applyTheme(savedTheme());
         <label>Date <input type="date" id="sh-date"></label>
         <label>Venue <input id="sh-venue"></label>
       </div>
-      <label>Presented by <input id="sh-host" placeholder="e.g. Resounding Joy"></label>
+      <div class="two">
+        <label>Presented by <input id="sh-host" placeholder="e.g. Resounding Joy"></label>
+        <label>Length (minutes) <input type="number" id="sh-length" inputmode="numeric" min="1" max="600" placeholder="e.g. 90"></label>
+      </div>
       <button type="button" class="btn" id="sh-band" style="margin-top:14px">★ Make the band app open on this gig</button>
       <div class="row-btns spread">
         <button type="button" class="btn danger" id="sh-delete">Delete gig</button>
@@ -444,7 +447,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v39';
+window.APP_VERSION = 'v40';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

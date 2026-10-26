@@ -110,6 +110,12 @@ function fmtDate(iso, long = true) {
 }
 // A song's lead singer at a gig: the gig's own pick (show.leads) or else the song's default (song.lead).
 const leadFor = (song, show) => show?.leads?.[song.id] || song.lead;
+// A gig's length is kept in minutes (show.length); shown as "1 hr 30 min".
+function fmtLength(min) {
+  if (!min) return '';
+  const h = Math.floor(min / 60), m = min % 60;
+  return [h && `${h} hr`, m && `${m} min`].filter(Boolean).join(' ');
+}
 function memberChip(memberId) {
   const m = get(memberId);
   // Viewers just see nothing when no lead singer is set; editors see a reminder.
@@ -155,7 +161,7 @@ function render() {
   }
   document.title = s ? `SOS Band · ${s.name}` : 'SOS Band';
   $('show-name').textContent = s ? s.name : (Object.keys(items).length ? 'No gig yet' : 'Loading…');
-  $('show-date').textContent = s ? fmtDate(s.date, false) : '';
+  $('show-date').textContent = s ? [fmtDate(s.date, false), fmtLength(s.length)].filter(Boolean).join(' · ') : '';
   renderSet(s); renderMet(s); renderPlot(s, b); renderGear(s); renderMixers(s); renderBand(s);
 }
 
@@ -184,7 +190,7 @@ function renderSet(s) {
   const ids = (s?.setlist || []).filter(inSet);
   const nSongs = ids.filter(id => !isBreak(id) && !isNote(id)).length;
   const nSets = ids.filter(isBreak).length + 1;
-  $('set-count').textContent = s ? `${nSongs} song${nSongs === 1 ? '' : 's'}${nSets > 1 ? ` in ${nSets} sets` : ''} · ${s.name}` : '';
+  $('set-count').textContent = s ? `${nSongs} song${nSongs === 1 ? '' : 's'}${nSets > 1 ? ` in ${nSets} sets` : ''} · ${s.name}${s.length ? ` · ${fmtLength(s.length)} gig` : ''}` : '';
   $('set-empty').hidden = ids.length > 0;
   wrap.hidden = !ids.length;
   $('print-set-charts').disabled = !nSongs;
@@ -360,7 +366,7 @@ function renderPlot(s, b) {
   const stage = $('stage');
   stage.querySelectorAll('.pcard').forEach(c => c.remove());
   $('plot-h').textContent = `${b.name || 'SOS Band'} — Stage Plot`;
-  $('plot-sub').textContent = s ? [s.name, fmtDate(s.date), s.venue, s.host].filter(Boolean).join('  |  ') : '';
+  $('plot-sub').textContent = s ? [s.name, fmtDate(s.date), fmtLength(s.length), s.venue, s.host].filter(Boolean).join('  |  ') : '';
   const legend = $('legend');
   legend.replaceChildren();
   if (!s) return;
@@ -1125,7 +1131,7 @@ $('print-set-list').addEventListener('click', () => {
   const s = currentShow();
   if (!s) return;
   const box = $('print-setlist');
-  box.replaceChildren(el('h1', null, `SOS Band · ${s.name}`), el('p', null, [fmtDate(s.date), s.venue].filter(Boolean).join(' · ')));
+  box.replaceChildren(el('h1', null, `SOS Band · ${s.name}`), el('p', null, [fmtDate(s.date), fmtLength(s.length), s.venue].filter(Boolean).join(' · ')));
   let ol = el('ol');
   for (const id of s.setlist || []) {
     if (isBreak(id)) {
@@ -1219,7 +1225,7 @@ function openShows() {
     const b = el('button');
     b.type = 'button';
     b.setAttribute('aria-current', s.id === cur?.id);
-    b.append(el('span', null, s.name + (EDITOR && s.id === band().currentShow ? ' ★' : '')), el('span', 'd', fmtDate(s.date, false)));
+    b.append(el('span', null, s.name + (EDITOR && s.id === band().currentShow ? ' ★' : '')), el('span', 'd', [fmtDate(s.date, false), fmtLength(s.length)].filter(Boolean).join(' · ')));
     b.addEventListener('click', () => { lsSet(K.show, s.id); render(); openShows(); keepChartsOffline(); });
     li.append(b);
     ul.append(li);
@@ -1229,6 +1235,7 @@ function openShows() {
     $('sh-date').value = cur.date || '';
     $('sh-venue').value = cur.venue || '';
     $('sh-host').value = cur.host || '';
+    $('sh-length').value = cur.length || '';
   }
   $('sh-band').disabled = !cur || cur.id === band().currentShow;
   $('sh-band').textContent = cur && cur.id === band().currentShow ? '★ The band app opens on this gig' : '★ Make the band app open on this gig';
@@ -1247,7 +1254,9 @@ $('sh-band').addEventListener('click', () => {
 });
 $('show-form').addEventListener('submit', e => {
   e.preventDefault();
-  patchShow(v => { v.name = $('sh-name').value.trim() || v.name; v.date = $('sh-date').value; v.venue = $('sh-venue').value.trim(); v.host = $('sh-host').value.trim(); });
+  patchShow(v => { v.name = $('sh-name').value.trim() || v.name; v.date = $('sh-date').value; v.venue = $('sh-venue').value.trim(); v.host = $('sh-host').value.trim();
+    const len = Math.round(Number($('sh-length').value));
+    v.length = len > 0 ? Math.min(len, 600) : 0; });
   openShows();
   toast('Gig saved.');
 });
