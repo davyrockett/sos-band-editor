@@ -131,6 +131,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   background on open and draws the next page ahead; only 5 drawn pages are kept and dropped ones are emptied (`pfForget`),
   because iPad Safari slows right down when drawn pages fill its canvas memory.
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.
+- In the Setlist, a song's lead-singer chip is greyed out (`.chip.out`) when that singer isn't in the gig's lineup, so David sees he must change the singer or drop the song (David, 2026-10-26).
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
 - Charts open in an in-app full-screen viewer (Close / Download / Print; on phones one Save / Print button = share sheet),
   drawn by `vendor/pdf.min.js` + `pdf.worker.min.js` (pdf.js 3.11.174). Opening the PDF directly left people stuck in the

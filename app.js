@@ -186,6 +186,7 @@ function renderSet(s) {
   $('set-empty').hidden = ids.length > 0;
   wrap.hidden = !ids.length;
   $('print-set-charts').disabled = !nSongs;
+  const playing = new Set((s?.lineup || []).map(l => l.member));
   let n = 0;
   ids.forEach(id => {
     if (isBreak(id)) {
@@ -238,7 +239,13 @@ function renderSet(s) {
     btn.type = 'button';
     const txt = el('span', 'song-txt');
     txt.append(el('span', 'song-title', song.title), el('span', 'song-artist', song.artist || ''));
-    btn.append(txt, memberChip(song.lead), el('span', 'keytag', song.key || ''));
+    // A singer who isn't playing this gig is greyed out: change the singer or drop the song (David, 2026-10-26).
+    const chip = memberChip(song.lead);
+    if (get(song.lead) && !playing.has(song.lead)) {
+      chip.classList.add('out');
+      chip.title = `${get(song.lead).name} isn't playing at ${s.name}`;
+    }
+    btn.append(txt, chip, el('span', 'keytag', song.key || ''));
     btn.addEventListener('click', () => openSong(id));
     li.append(btn);
     if (canEdit()) {
