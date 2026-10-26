@@ -131,6 +131,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   background on open and draws the next page ahead; only 5 drawn pages are kept and dropped ones are emptied (`pfForget`),
   because iPad Safari slows right down when drawn pages fill its canvas memory.
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.
+- **Lead singers per gig** (David, 2026-10-26): `song.lead` is the song's DEFAULT singer (Edit song: "Default lead singer"). A gig can pick someone else for a song without changing other gigs: `show.leads` = { songId: memberId }, set in the song pop-up opened from that gig's setlist ("Lead singer at <gig>", editor only; choosing Default removes the entry). `leadFor(song, show)` gives the singer to show; the setlist, song pop-up and printed setlist use it, the song library shows the default.
 - In the Setlist, a song's lead-singer chip is greyed out (`.chip.out`) when that singer isn't in the gig's lineup, so David sees he must change the singer or drop the song (David, 2026-10-26).
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
 - Charts open in an in-app full-screen viewer (Close / Download / Print; on phones one Save / Print button = share sheet),

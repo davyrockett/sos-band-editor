@@ -229,6 +229,8 @@ applyTheme(savedTheme());
         <div><dt>Key</dt><dd id="sv-key"></dd></div>
         <div><dt>Tempo</dt><dd id="sv-bpm"></dd></div>
       </dl>
+      <label id="sv-gig-lead-wrap" class="edit-only" hidden>Lead singer at <span id="sv-gig-name"></span>
+        <select id="sv-gig-lead"></select></label>
       <p class="sv-notes" id="sv-notes"></p>
       <div class="row-btns">
         <button type="button" class="btn primary" id="sv-chart">Open chart</button>
@@ -241,7 +243,7 @@ applyTheme(savedTheme());
       <label>Title <input id="se-title" required></label>
       <label>Artist <input id="se-artist"></label>
       <div class="two">
-        <label>Lead singer <select id="se-lead"></select></label>
+        <label>Default lead singer <select id="se-lead"></select></label>
         <label>Key <input id="se-key" placeholder="e.g. A"></label>
       </div>
       <label for="se-bpm">Tempo (BPM)</label>
@@ -442,7 +444,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v38';
+window.APP_VERSION = 'v39';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

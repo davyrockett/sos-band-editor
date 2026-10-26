@@ -108,6 +108,8 @@ function fmtDate(iso, long = true) {
   const d = new Date(iso + 'T12:00:00');
   return d.toLocaleDateString('en-US', long ? { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
 }
+// A song's lead singer at a gig: the gig's own pick (show.leads) or else the song's default (song.lead).
+const leadFor = (song, show) => show?.leads?.[song.id] || song.lead;
 function memberChip(memberId) {
   const m = get(memberId);
   // Viewers just see nothing when no lead singer is set; editors see a reminder.
@@ -240,11 +242,12 @@ function renderSet(s) {
     const txt = el('span', 'song-txt');
     txt.append(el('span', 'song-title', song.title), el('span', 'song-artist', song.artist || ''));
     // A singer who isn't playing this gig is greyed out: change the singer or drop the song (David, 2026-10-26).
-    const chip = memberChip(song.lead);
-    if (get(song.lead) && !playing.has(song.lead)) {
+    const lead = leadFor(song, s);
+    const chip = memberChip(lead);
+    if (get(lead) && !playing.has(lead)) {
       chip.classList.add('out');
-      chip.title = `${get(song.lead).name} isn't playing at ${s.name}`;
-    }
+      chip.title = `${get(lead).name} isn't playing at ${s.name}`;
+    } else if (lead !== song.lead) chip.title += ` at this gig (default: ${get(song.lead)?.name || 'not set'})`;
     btn.append(txt, chip, el('span', 'keytag', song.key || ''));
     btn.addEventListener('click', () => openSong(id));
     li.append(btn);
@@ -800,8 +803,20 @@ function openSong(id) {
   const s = get(id);
   $('song-dlg-title').textContent = s.title;
   $('sv-artist').textContent = s.artist || '';
-  const lead = get(s.lead);
+  // In this gig's set, the lead is the gig's pick; the editor can change it here for this gig only.
+  const show = currentShow();
+  const inGig = Boolean(show?.setlist?.includes(id));
+  const lead = get(inGig ? leadFor(s, show) : s.lead);
   $('sv-lead').textContent = lead ? lead.name : 'Not set';
+  $('sv-gig-lead-wrap').hidden = !(inGig && canEdit());
+  if (inGig && canEdit()) {
+    const playing = new Set((show.lineup || []).map(l => l.member));
+    const sel = $('sv-gig-lead');
+    sel.replaceChildren(new Option(`Default (${get(s.lead)?.name || 'not set'})`, ''));
+    members().forEach(m => sel.append(new Option(playing.has(m.id) ? m.name : `${m.name} (not playing)`, m.id)));
+    sel.value = show.leads?.[id] || '';
+    $('sv-gig-name').textContent = show.name;
+  }
   $('sv-key').textContent = s.key || '—';
   $('sv-bpm').textContent = s.bpm ? `${s.bpm} BPM` : '—';
   $('sv-notes').textContent = s.notes || '';
@@ -836,6 +851,16 @@ function editSong(id) {
   if (!$('song-dlg').open) $('song-dlg').showModal();
 }
 $('sv-edit').addEventListener('click', () => editSong(songId));
+$('sv-gig-lead').addEventListener('change', e => {
+  const v = e.target.value, song = get(songId);
+  patchShow(x => {
+    x.leads = { ...(x.leads || {}) };
+    if (!v || v === song.lead) delete x.leads[songId];   // the default needs no gig pick
+    else x.leads[songId] = v;
+  });
+  openSong(songId);
+  toast(`Lead singer for “${song.title}” at ${currentShow().name}: ${get(leadFor(song, currentShow()))?.name || 'not set'}.`);
+});
 $('song-new').addEventListener('click', () => editSong(null));
 $('note-add').addEventListener('click', () => {
   const id = uid('note');
@@ -1115,7 +1140,7 @@ $('print-set-list').addEventListener('click', () => {
     const song = get(id);
     if (!song) continue;
     const li = el('li', null, song.title);
-    const extra = [get(song.lead)?.name, song.key && `key ${song.key}`].filter(Boolean).join(' · ');
+    const extra = [get(leadFor(song, s))?.name, song.key && `key ${song.key}`].filter(Boolean).join(' · ');
     if (extra) li.append(el('small', null, extra));
     ol.append(li);
   }
