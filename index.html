@@ -447,18 +447,20 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v41';
+window.APP_VERSION = 'v42';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
   window.SW_REG = reg;
   const banner = document.getElementById('update-banner');
   const apply = (worker) => worker.postMessage('skipWaiting');
-  // Right after the app opens there's nothing to lose, so updates apply on their own.
+  // Right after the app opens there's nothing to lose, so updates apply on their own,
+  // but never while Perform is open or the metronome is going: the reload would throw you out mid-song (David, 2026-10-27).
   const justOpened = () => performance.now() < 20000;
+  const busy = () => !document.getElementById('perform').hidden || document.getElementById('met-start').classList.contains('on');
   const handle = (worker) => {
     if (!worker || !navigator.serviceWorker.controller) return;
-    if (justOpened()) apply(worker);
+    if (justOpened() && !busy()) apply(worker);
     else {
       banner.hidden = false;
       document.getElementById('update-now').onclick = () => apply(worker);
@@ -469,12 +471,15 @@ window.APP_VERSION = 'v41';
     const w = reg.installing;
     w.addEventListener('statechange', () => { if (w.state === 'installed') handle(w); });
   });
+  // If an update takes over while busy anyway (say from another window), reload once Perform and the metronome stop.
   let reloaded = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
+  const reload = () => {
     if (reloaded) return;
+    if (busy()) { setTimeout(reload, 2000); return; }
     reloaded = true;
     location.reload();
-  });
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', reload);
 })();
 </script>
 </body>
