@@ -1296,7 +1296,7 @@ const pf = { silent: true, songs: [], i: 0, page: 1, docs: new Map(), cache: new
 const BPM_MIN = 30, BPM_MAX = 260;
 const cleanBpm = v => { const n = Math.round(Number(v)); return n >= BPM_MIN && n <= BPM_MAX ? n : null; };
 const met = Object.assign({ bpm: 120, beats: 4, silent: true, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
-let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null;
+let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null, metAudio = false, metRun = 0;
 const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song }));
 // The songs in this gig's set, in order (breaks and notes left out).
 const metSongs = s => (s?.setlist || []).filter(id => !isBreak(id) && !isNote(id) && get(id)).map(get);
@@ -1316,13 +1316,14 @@ function metClick(t, accent) {
 function metSchedule() {
   // If the page was too busy to schedule in time (an iPad drawing a chart in Perform), skip the beats already
   // missed instead of playing them all at once, which put the high click on beat 2 or 3 (David, 2026-10-25).
-  while (metNext < metCtx.currentTime) {
+  if (!metOn) return;
+  while (metNext < metNow()) {
     metNext += 60 / met.bpm;
     metBeat = (metBeat + 1) % met.beats;
   }
-  while (metNext < metCtx.currentTime + 0.12) {
+  while (metNext < metNow() + 0.12) {
     // Perform's little metronome has its own Silent switch (on each time Perform opens).
-    if (!($('perform').hidden ? met.silent : pf.silent)) metClick(metNext, metBeat === 0 && met.beats > 1);
+    if (metAudio && !($('perform').hidden ? met.silent : pf.silent)) metClick(metNext, metBeat === 0 && met.beats > 1);
     metQueue.push({ t: metNext, beat: metBeat });
     metNext += 60 / met.bpm;
     metBeat = (metBeat + 1) % met.beats;
@@ -1331,7 +1332,7 @@ function metSchedule() {
 function metDraw() {
   if (!metOn) return;
   let hit = null;
-  while (metQueue.length && metQueue[0].t <= metCtx.currentTime) hit = metQueue.shift();
+  while (metQueue.length && metQueue[0].t <= metNow()) hit = metQueue.shift();
   if (hit) {
     // Only beat 1 of each bar flashes (David); the beat lights still step every beat.
     if (hit.beat === 0) for (const box of [$('met-box'), $('pf-met')]) {
@@ -1343,22 +1344,66 @@ function metDraw() {
   }
   requestAnimationFrame(metDraw);
 }
-async function metStart() {
-  metCtx = metCtx || new (window.AudioContext || window.webkitAudioContext)();
-  if (metCtx.state !== 'running') await metCtx.resume();
-  metOn = true;
-  metBeat = 0;
+// The beats run on the sound card's clock when it is working, otherwise on the page's own clock (flashes only).
+const metNow = () => (metAudio ? metCtx.currentTime : performance.now() / 1000);
+// iPad Safari puts the sound to sleep ("interrupted") after the screen locks, another app plays, etc., and
+// waking it up again can hang for ever: Start then gave no sound AND no flashing (David, rehearsal 2026-10-26).
+// So every Start that finds it asleep makes a fresh one, right there in the tap, and never waits on it.
+function metAudioUp() {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}   // play even when the iPad is muted
+  if (metCtx?.state !== 'running') {
+    try { metCtx?.close().catch(() => {}); } catch {}
+    metCtx = null;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      ctx.addEventListener('statechange', () => { if (ctx === metCtx) metAudioLost(); });
+      metCtx = ctx;
+    } catch { return; }
+  }
+  metCtx.resume().catch(() => {});
+  try {   // a silent blip, played in the tap, is what lets iPad Safari make sound
+    const b = metCtx.createBufferSource();
+    b.buffer = metCtx.createBuffer(1, 1, metCtx.sampleRate);
+    b.connect(metCtx.destination);
+    b.start();
+  } catch {}
+}
+// The sound went to sleep while running (a call, Siri…): keep flashing on the page's clock.
+function metAudioLost() {
+  if (!metOn || !metAudio || metCtx?.state === 'running') return;
+  metAudio = false;
   metQueue = [];
-  metNext = metCtx.currentTime + 0.08;
-  metSchedule();
-  metTimer = setInterval(metSchedule, 25);
-  requestAnimationFrame(metDraw);
-  try { metLock = await navigator.wakeLock?.request('screen'); } catch {}   // keep the screen on while it runs
+  metNext = metNow() + 0.05;
+  toast('The sound stopped. Tap Stop, then Start, to bring it back.');
+}
+function metStart() {
+  metAudioUp();
+  const run = ++metRun;
+  metAudio = false;
+  metOn = true;   // straight away, so the button shows Stop and a second tap stops it
   metMarks();
+  try { navigator.wakeLock?.request('screen').then(l => { if (metOn && run === metRun) metLock = l; else l.release(); }).catch(() => {}); } catch {}   // keep the screen on while it runs
+  // Give the sound a moment to wake up; if it doesn't, the flashes still start on time.
+  const t0 = performance.now();
+  (function go() {
+    if (!metOn || run !== metRun) return;
+    const ready = metCtx?.state === 'running' && metCtx.currentTime > 0;
+    if (!ready && performance.now() - t0 < 300) { setTimeout(go, 15); return; }
+    metAudio = ready;
+    if (!ready) toast('No sound on this device just now, so it is flashing only. Tap Stop, then Start, to try again.');
+    metBeat = 0;
+    metQueue = [];
+    metNext = metNow() + 0.08;
+    metSchedule();
+    metTimer = setInterval(metSchedule, 25);
+    requestAnimationFrame(metDraw);
+  })();
 }
 function metStop() {
   metOn = false;
+  metRun++;
   clearInterval(metTimer);
+  metTimer = null;
   metQueue = [];
   metLock?.release().catch(() => {});
   metLock = null;

@@ -115,7 +115,7 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   the page is too busy to schedule in time (an iPad drawing a chart), `metSchedule()` SKIPS the missed beats: playing them late
   bunched them up and put the high click on beat 2 or 3 (David's iPad, 2026-10-25). v36 tried delaying the flash for the
   speaker's latency plus a "Flash delay" setting; it was WAY off on David's iPad and wasn't the problem — reverted in v37, don't retry; stops when
-  the app is hidden. Metronome settings are per device (`sos.met` / `sosed.met`); it starts in Silent until changed (David). David said "style it like this" but
+  the app is hidden. **Start must never wait on the sound** (v41, David: at rehearsal Start sometimes gave no sound AND no flash on iPad): iPad Safari leaves the AudioContext "interrupted" after a screen lock / another app / a call, and `resume()` can hang for ever. `metAudioUp()` (in the tap) replaces any context that isn't running with a fresh one, plays a silent blip and sets `navigator.audioSession.type = 'playback'` (sound even when the iPad is muted); `metStart()` shows Stop at once, waits up to 300 ms for the sound, and otherwise runs flash-only on the page clock (`metNow()`, toast). If the sound drops mid-run, flashes carry on (`metAudioLost`). Metronome settings are per device (`sos.met` / `sosed.met`); it starts in Silent until changed (David). David said "style it like this" but
   no picture came through; it uses the app's own style for now.
 - **Perform** (2026-10-25, David): Setlist's Perform button (both apps) opens the gig's charts full screen (`#perform`,
   `openPerform()`), one page at a time, fitted to the screen on a dark background. Tap right 35% = next page, left 35% =
