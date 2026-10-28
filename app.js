@@ -82,6 +82,19 @@ function put(id, rec) {
   sync.soon();
 }
 function remove(id) { put(id, { deleted: true }); }
+// A sync that finishes while you're dragging, or typing in a list, must not redraw the page under your finger:
+// the dragged row was left behind as a copy and saved twice, so ✕ then removed both (David, 2026-10-27).
+// The page redraws as soon as you let go.
+let dragging = false, renderLater = false, renderTimer = 0;
+const userBusy = () => dragging || Boolean(document.activeElement?.closest?.('.panel') && document.activeElement.matches('input:not([type=range]):not([type=checkbox]), textarea'));
+function renderWhenFree() {
+  clearTimeout(renderTimer);
+  if (!userBusy()) { render(); return; }
+  renderLater = true;
+  renderTimer = setTimeout(() => { if (renderLater) renderWhenFree(); }, 1000);
+}
+function renderIfWaiting() { if (renderLater && !userBusy()) render(); }
+document.addEventListener('focusout', () => setTimeout(renderIfWaiting));
 function patchShow(fn) {
   const s = currentShow();
   if (!s) return;
@@ -147,6 +160,7 @@ function gearLines(m) {
 
 /* ---------- Render ---------- */
 function render() {
+  renderLater = false;
   document.body.classList.toggle('editing', canEdit());
   const b = band(), s = currentShow();
   $('band-name').textContent = EDITOR ? 'SOS Band Editor' : 'SOS Band';
@@ -313,6 +327,8 @@ $('song-search').addEventListener('input', () => renderLibrary(currentShow()));
 // The row moves in the page as you drag; the new order is saved on release.
 function startRowDrag(e, li) {
   e.preventDefault();
+  if (dragging) return;   // a second finger
+  dragging = true;
   const wrap = $('setlist');
   const order = () => [...wrap.querySelectorAll('li[data-id]')].map(r => r.dataset.id).join('|');
   const before = order();
@@ -351,8 +367,10 @@ function startRowDrag(e, li) {
     window.removeEventListener('pointercancel', up);
     li.classList.remove('dragging');
     li.style.transform = '';
+    dragging = false;
     const after = order();
-    if (after !== before) patchShow(x => { x.setlist = after.split('|'); });
+    if (after !== before) patchShow(x => { x.setlist = [...new Set(after.split('|'))]; });
+    else if (renderLater) render();
     else renderSet(currentShow());
   };
   // Listen on the whole window: the row is moved around the page while dragging.
@@ -406,24 +424,33 @@ function showPlayer(m, ch) {
 }
 function startCardDrag(e, card, memberId) {
   e.preventDefault();
+  if (dragging) return;   // a second finger
+  dragging = true;
   const r = $('stage').getBoundingClientRect();
   const sx = e.clientX, sy = e.clientY;
   const x0 = parseFloat(card.style.left), y0 = parseFloat(card.style.top);
-  let x = x0, y = y0;
+  let x = x0, y = y0, moved = false, done = false;
   card.classList.add('dragging');
-  card.setPointerCapture?.(e.pointerId);
+  try { card.setPointerCapture(e.pointerId); } catch {}
   const move = ev => {
+    // A finger wobbles a few pixels on a tap: only start moving the card once it's clearly being dragged.
+    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 10) return;
+    moved = true;
     x = Math.max(6, Math.min(94, x0 + (ev.clientX - sx) / r.width * 100));
     y = Math.max(0, Math.min(85, y0 + (ev.clientY - sy) / r.height * 100));
     card.style.left = x + '%';
     card.style.top = y + '%';
   };
   const up = () => {
+    if (done) return;
+    done = true;
     card.removeEventListener('pointermove', move);
     card.removeEventListener('pointerup', up);
     card.removeEventListener('pointercancel', up);
+    card.removeEventListener('lostpointercapture', up);
     card.classList.remove('dragging');
-    if (Math.abs(x - x0) + Math.abs(y - y0) <= 0.3) { openMember(memberId); return; }
+    dragging = false;
+    if (!moved) { renderIfWaiting(); openMember(memberId); return; }
     patchShow(s => {
       const l = s.lineup.find(v => v.member === memberId);
       if (l) { l.x = Math.round(x * 10) / 10; l.y = Math.round(y * 10) / 10; }
@@ -432,6 +459,7 @@ function startCardDrag(e, card, memberId) {
   card.addEventListener('pointermove', move);
   card.addEventListener('pointerup', up);
   card.addEventListener('pointercancel', up);
+  card.addEventListener('lostpointercapture', up);
 }
 
 /* Gear */
@@ -1805,7 +1833,7 @@ function merge(local, remote) {
   return out;
 }
 const canon = s => JSON.stringify(Object.keys(s || {}).sort().map(k => [k, s[k]]));
-function replaceLocal(next) { items = next; saveLocal(); render(); }
+function replaceLocal(next) { items = next; saveLocal(); renderWhenFree(); }
 
 const sync = {
   status: 'idle',
@@ -1838,7 +1866,7 @@ const sync = {
         catch (e) { if (e.kind !== 'conflict' || attempt >= 3) throw e; first = false; }
       }
       if (on) { lsSet(K.last, new Date().toISOString()); this.set('ok'); } else this.set('view');
-      if (EDITOR) render();
+      if (EDITOR) renderWhenFree();
     } catch (e) {
       this.set(e.kind || 'other', e.message);
     } finally {
