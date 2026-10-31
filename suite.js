@@ -3,9 +3,19 @@
    that goes back there (sessionStorage 'davyrockett-suite-home', set by whichever one opened it). Opened any other way (a student's First Frets, the band's SOS Band, a TV), nothing
    shows. The same file is copied into every app (master copy: Claude Apps/tools/suite.js).
    Load it with: <script src="suite.js" defer></script>, and list it in sw.js ASSETS.
-   Old-style JavaScript on purpose: Memory Lane runs on TV browsers. */
+   Old-style JavaScript on purpose: Memory Lane runs on TV browsers.
+   It also loads the TV mirror (www.davyrockett.com/tv/mirror.js) while 📺 TV is on for this device (switched on the
+   Apps screen), so whatever app is open here shows on the TV. Not inside a frame: that's the TV itself. */
 (function () {
   'use strict';
+  try {
+    if (localStorage.getItem('davyrockett-tv') === '1' && window.top === window) {
+      var tv = document.createElement('script');
+      tv.src = '/tv/mirror.js';
+      document.head.appendChild(tv);
+    }
+  } catch (e) { /* blocked */ }
+
   var fromSuite = false;
   var home = '/apps/';
   try {
