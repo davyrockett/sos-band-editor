@@ -5,7 +5,9 @@
    Load it with: <script src="suite.js" defer></script>, and list it in sw.js ASSETS.
    Old-style JavaScript on purpose: Memory Lane runs on TV browsers.
    It also loads the TV mirror (www.davyrockett.com/tv/mirror.js) while 📺 TV is on for this device (switched on the
-   Apps screen), so whatever app is open here shows on the TV. Not inside a frame: that's the TV itself. */
+   Apps screen), so whatever app is open here shows on the TV. Not inside a frame: that's the TV itself.
+   Both floating buttons (All apps, and the mirror's "On TV") sit in the bottom-left corner, or just above an app's
+   bottom bar when it has one (on an iPhone they covered Memory Lane's controls, 2026-10-30). */
 (function () {
   'use strict';
   try {
@@ -15,6 +17,46 @@
       document.head.appendChild(tv);
     }
   } catch (e) { /* blocked */ }
+
+  /* ---------- Staying clear of bottom bars ----------
+     Looks at what's under the bottom-left corner (leaving out these buttons). If that's inside a bar along the
+     bottom of the screen (wide, not tall, its bottom edge at the bottom of the screen), the buttons go just above
+     it. Checked a few times a second, since bars come and go as an app changes screens. */
+  var FLOAT = ['suite-home', 'tv-pill'];
+  function ours(e) {
+    for (; e; e = e.parentElement) if (e.id === FLOAT[0] || e.id === FLOAT[1]) return true;
+    return false;
+  }
+  function barTop() {
+    var h = window.innerHeight, w = window.innerWidth, top = h, xs = [24, 110, 200, 290];
+    if (!document.elementsFromPoint) return 0;
+    for (var i = 0; i < xs.length && xs[i] < w; i++) {
+      var stack = document.elementsFromPoint(xs[i], h - 30);
+      for (var j = 0; j < stack.length; j++) {
+        if (ours(stack[j])) continue;
+        for (var e = stack[j]; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+          var r = e.getBoundingClientRect();
+          if (r.width >= w * 0.6 && r.height < h * 0.5 && r.bottom <= h + 2 && r.bottom >= h - 40) {
+            if (r.top < top) top = r.top;
+            break;
+          }
+        }
+        break;   // only the topmost thing that isn't one of these buttons
+      }
+    }
+    return top < h ? top : 0;
+  }
+  function place() {
+    var t = barTop();
+    var bottom = t ? (window.innerHeight - t + 8) + 'px' : 'calc(12px + env(safe-area-inset-bottom,0px))';
+    for (var i = 0; i < FLOAT.length; i++) {
+      var el = document.getElementById(FLOAT[i]);
+      // Only when it changes: a change on the page makes the TV mirror send a fresh copy.
+      if (el && el.suiteBottom !== bottom) { el.style.bottom = bottom; el.suiteBottom = bottom; }
+    }
+  }
+  setInterval(place, 600);
+  window.addEventListener('resize', place);
 
   var fromSuite = false;
   var home = '/apps/';
@@ -40,6 +82,7 @@
       'box-shadow:0 4px 14px rgba(0,0,0,.28);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);' +
       'border:1px solid rgba(255,255,255,.45);text-decoration:none;opacity:.92';
     document.body.appendChild(a);
+    place();
   }
   if (document.body) add();
   else document.addEventListener('DOMContentLoaded', add);
