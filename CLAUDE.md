@@ -46,6 +46,8 @@ concrete. Likes to see things working: verify before saying "done".
 - Keep screens uncluttered: show extra controls only when they're relevant.
 - Nothing should jump around: when a control doesn't apply, grey it out in place rather than hiding it, and
   reserve space for things that appear, so other controls never shift.
+- **Pop-ups close with a tap outside** (David, 2026-10-31): any settings sheet or pop-up closes when you tap or
+  click outside it, and still keeps its own Close / Done button. Forms with typing ask "Discard your changes?" first.
 - **No AI voices, ever:** no text-to-speech or synthesised singing in any app. Use written instructions on
   screen, and instrument or synth sounds for audio.
 - Commit messages: a short, plain description of the change.
