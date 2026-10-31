@@ -1,6 +1,7 @@
 /* suite.js: the "All apps" button for David's app suite (www.davyrockett.com/apps/) and Rundown
    (www.davyrockett.com/rundown/). When an app was opened from either, this adds a small round button
-   that goes back there (sessionStorage 'davyrockett-suite-home', set by whichever one opened it). Opened any other way (a student's First Frets, the band's SOS Band, a TV), nothing
+   that goes back there ('davyrockett-suite-home', set by whichever one opened it, in sessionStorage and remembered in
+   localStorage). On a device that has never opened either (a student's First Frets, the band's SOS Band, a TV), nothing
    shows. The same file is copied into every app (master copy: Claude Apps/tools/suite.js).
    Load it with: <script src="suite.js" defer></script>, and list it in sw.js ASSETS.
    Old-style JavaScript on purpose: Memory Lane runs on TV browsers.
@@ -58,11 +59,13 @@
   setInterval(place, 600);
   window.addEventListener('resize', place);
 
+  // Opened from the Apps screen or Rundown on this visit, or ever on this device (a Dock web app reopens straight
+  // onto its last page, skipping the Apps screen: 2026-10-30). Students' and the band's devices never open them.
   var fromSuite = false;
   var home = '/apps/';
   try {
-    fromSuite = sessionStorage.getItem('davyrockett-suite') === '1';
-    home = sessionStorage.getItem('davyrockett-suite-home') || home;
+    fromSuite = sessionStorage.getItem('davyrockett-suite') === '1' || localStorage.getItem('davyrockett-suite') === '1';
+    home = sessionStorage.getItem('davyrockett-suite-home') || localStorage.getItem('davyrockett-suite-home') || home;
   } catch (e) { /* blocked */ }
   if (!fromSuite) return;
 
