@@ -132,6 +132,10 @@ the two November gigs started as copies of the Midway info (David: "same info fo
   `keepChartsOffline()` saves EVERY song's chart (this gig's set first) after each sync; Perform opens all the set's PDFs in the
   background on open and draws the next page ahead; only 5 drawn pages are kept and dropped ones are emptied (`pfForget`),
   because iPad Safari slows right down when drawn pages fill its canvas memory.
+  **Two pages side by side** (David, 2026-11-01: iPad, TV and computer in landscape): when the screen is wider than tall
+  and at least 500px tall (`pfTwo()`; phones on their side stay one page), pages show two at a time. Each song starts on
+  the left (1–2, 3–4, …), an odd last page shows alone in the middle, turns go two pages at a time, and turning the iPad
+  snaps to the right pages. The TV mirror (website `tv/tv.js` TV_CSS) splits the screen between the two pages.
 - **Updates never reload during Perform or while the metronome runs** (David, 2026-10-27): the auto-update in the first 20 s after opening is skipped then (the banner shows instead), and a takeover reload waits until both stop (`busy()` in index.html). Band members opening the app at a gig for the first time in a while would otherwise be thrown out of Perform.
 - **No redraws under your finger** (David, 2026-10-27: moving a song sometimes duplicated it, ✕ then removed both; odd stage plot moves): a sync that finished mid-drag redrew the page, leaving the dragged row as a second copy that got saved. Sync/remote redraws now go through `renderWhenFree()`, held while `dragging` or while typing in a panel's text box, and done on release / leaving the box (1 s retry). Setlist saves drop duplicate ids. Stage plot: a card only moves after 10px, so a wobbly tap opens the person instead of nudging them.
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.

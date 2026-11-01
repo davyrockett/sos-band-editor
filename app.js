@@ -1573,7 +1573,11 @@ metMarks();
 /* ---------- Perform ----------
    The set's charts full screen, one page at a time: tap the right side for the next page, the left side for the one
    before (straight on into the next song), the middle for the bar (Close, pick a song, metronome). Arrow keys and
-   page-turner pedals work too. The screen stays on, and the little metronome follows the song on screen. */
+   page-turner pedals work too. The screen stays on, and the little metronome follows the song on screen.
+   On its side (iPad, TV, computer, not a phone) it shows two pages side by side; each song starts on the left, and
+   pf.page is then the left page of the two (David, 2026-11-01). */
+const PF_GAP = 12;
+const pfTwo = () => { const b = $('pf-stage'); return b.clientWidth > b.clientHeight && b.clientHeight >= 500; };
 function pfDoc(song) {
   if (!song?.chart) return Promise.resolve(null);
   if (!pf.docs.has(song.id)) pf.docs.set(song.id, (async () => {
@@ -1596,7 +1600,7 @@ function pfForget(keep = 0) {
 }
 // One page drawn as big as fits the screen (sharp on Retina screens). Kept for a moment so turning back is instant.
 async function pfDraw(doc, n, key) {
-  const box = $('pf-stage'), W = box.clientWidth, H = box.clientHeight, k = `${key}:${n}:${W}x${H}`;
+  const box = $('pf-stage'), W = pfTwo() ? (box.clientWidth - PF_GAP) / 2 : box.clientWidth, H = box.clientHeight, k = `${key}:${n}:${W}x${H}`;
   if (pf.cache.has(k)) return pf.cache.get(k);
   const job = (async () => {
     const pg = await doc.getPage(n);
@@ -1610,7 +1614,7 @@ async function pfDraw(doc, n, key) {
     return c;
   })();
   pf.cache.set(k, job);
-  pfForget(5);
+  pfForget(pfTwo() ? 6 : 5);
   return job;
 }
 async function pfShow() {
@@ -1631,27 +1635,32 @@ async function pfShow() {
     return;
   }
   if (pf.page < 1 || pf.page > doc.numPages) pf.page = pf.page < 1 ? doc.numPages : 1;   // -1 = its last page
-  $('pf-count').textContent = `Song ${pf.i + 1} of ${pf.songs.length} · page ${pf.page} of ${doc.numPages}`;
+  const step = pfTwo() ? 2 : 1;
+  if (step === 2) pf.page -= (pf.page - 1) % 2;   // two at a time: 1–2, 3–4, …
+  const last = Math.min(pf.page + step - 1, doc.numPages);
+  $('pf-count').textContent = `Song ${pf.i + 1} of ${pf.songs.length} · page ${pf.page === last ? pf.page : `${pf.page}–${last}`} of ${doc.numPages}`;
   try {
-    const c = await pfDraw(doc, pf.page, song.id);
+    const cs = await Promise.all(Array.from({ length: last - pf.page + 1 }, (_, n) => pfDraw(doc, pf.page + n, song.id)));
     if (t !== pf.token) return;
     msg.hidden = true;
-    page.replaceChildren(c);
+    page.replaceChildren(...cs);
   } catch { if (t === pf.token) { msg.replaceChildren(el('b', null, song.title), el('span', 'pf-dim', 'Couldn’t show this page.')); msg.hidden = false; } }
-  // Get the next page (or the next song's first) ready in the background.
+  // Get the next page(s) (or the next song's first) ready in the background.
   const nextSong = pf.songs[pf.i + 1];
-  if (pf.page < doc.numPages) pfDraw(doc, pf.page + 1, song.id).catch(() => {});
-  else if (nextSong) pfDoc(nextSong).then(d => d && d !== 'failed' && pfDraw(d, 1, nextSong.id)).catch(() => {});
+  if (last < doc.numPages) for (let n = last + 1; n <= Math.min(last + step, doc.numPages); n++) pfDraw(doc, n, song.id).catch(() => {});
+  else if (nextSong) pfDoc(nextSong).then(d => {
+    if (d && d !== 'failed') for (let n = 1; n <= Math.min(step, d.numPages); n++) pfDraw(d, n, nextSong.id).catch(() => {});
+  }).catch(() => {});
 }
 async function pfStep(d) {
   const doc = await pfDoc(pf.songs[pf.i]);
-  const pages = doc && doc !== 'failed' ? doc.numPages : 1;
+  const pages = doc && doc !== 'failed' ? doc.numPages : 1, step = pfTwo() ? 2 : 1;
   if (d > 0) {
-    if (pf.page < pages) pf.page++;
+    if (pf.page + step <= pages) pf.page += step;
     else if (pf.i < pf.songs.length - 1) { pf.i++; pf.page = 1; }
     else { toast('That’s the end of the set.'); return; }
   } else {
-    if (pf.page > 1) pf.page--;
+    if (pf.page > 1) pf.page = Math.max(1, pf.page - step);
     else if (pf.i > 0) { pf.i--; pf.page = -1; }
     else return;
   }

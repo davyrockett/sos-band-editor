@@ -405,7 +405,7 @@ body.viewing { overflow: hidden; }
 .perform { position: fixed; inset: 0; z-index: 70; background: #1A1714; color: #F0EBE3; user-select: none; -webkit-user-select: none; }
 .pf-stage { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   display: grid; place-items: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.pf-page { display: grid; place-items: center; }
+.pf-page { display: flex; align-items: center; justify-content: center; gap: 12px; }   /* gap = PF_GAP in app.js */
 .pf-page canvas { display: block; background: #fff; }
 .pf-msg { margin: 0; display: grid; gap: 8px; text-align: center; font-size: 20px; padding: 20px; }
 .pf-msg b { font-family: var(--f-display); font-size: 44px; line-height: 1.05; }
