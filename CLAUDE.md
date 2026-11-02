@@ -90,6 +90,13 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
   Print (`mixPrint()`, print-only `#mix-print`; the interactive cards are hidden): page 1 = title, flow, both boards side by side as set;
   page 2 = settings sheet, one table per mixer (a column per knob/fader; strips with nothing set print blank to write in at rehearsal)
   plus each master section as little knobs/faders (graphic EQ too), Out / Monitor / Effect, then warnings and notes.
+  **Drawings must match the boards for matching by eye** (David, 2026-11-02: "most important"): `mixerFace()` lays each board
+  on its real rows (`FACE_ROWS`: 1 numbers, 2 sockets, 3–10 knob rows, 11 buttons, 12 faders, 13 tape; CSS subgrid) from the
+  photos: blue stereo channels' knobs start lower (gain on the MF-freq row); blue master = 48V, EPM 8 logo, Monitor + Phones
+  knobs, Aux pre / 2-track buttons, meters, Mix L/R; Mackie master = graphic EQ, 48V, meters, ReadyFX box, USB level + thru,
+  Break, FX master / FX to mon / Phones / Tape level knobs, ST RTN mute, ST RTN / FX RTN / MON / MAIN faders. Knob looks (`KL`, `MK`):
+  blue = coloured cap on a skirt with a line; Mackie = black with a coloured fin. Fader marks (`FADE`) measured off the photos
+  (Mackie U at 74% of travel). Printout: page 1 flow + blue board, page 2 Mackie board, then the settings sheet.
   Picking an input never swaps: the page warns (red) when an input has no channel or is on two (David's wish, 2026-10-24). The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
   The Gear tab's PA section adds the mixers, their power cables and (Blue → Mackie) the 2 XLR-to-1/4" submix cables (`mixerGear`).
   **Monitors** (2026-10-25, David): NOT per player. A "Monitor" dropdown on the master mixer card (Mackie MON SEND; blue mixer alone: AUX 1 OUT): No monitor /

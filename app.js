@@ -712,9 +712,9 @@ const F = {
 };
 // Fader scales as printed beside the faders: [how far up (0–1), dB]; null = ∞ (off).
 const FADE = {
-  epm: [[0, null], [.15, -30], [.25, -20], [.41, -10], [.54, -5], [.65, 0], [.77, 5], [1, 10]],
-  epmMix: [[0, null], [.14, -40], [.25, -30], [.4, -20], [.52, -15], [.65, -10], [.76, -5], [1, 0]],
-  mackie: [[0, null], [.1, -50], [.17, -40], [.28, -30], [.39, -20], [.59, -10], [.7, -5], [.81, 0], [.91, 5], [1, 10]],
+  epm: [[0, null], [.13, -30], [.24, -20], [.4, -10], [.54, -5], [.65, 0], [.77, 5], [1, 10]],
+  epmMix: [[0, null], [.13, -40], [.24, -30], [.4, -20], [.54, -15], [.65, -10], [.77, -5], [1, 0]],
+  mackie: [[0, null], [.08, -50], [.13, -40], [.25, -30], [.36, -20], [.49, -10], [.62, -5], [.74, 0], [.86, 5], [1, 10]],
 };
 function fadeDb(marks, unity) {
   return v => {
@@ -726,33 +726,52 @@ function fadeDb(marks, unity) {
     return d ? `${sgn(d)} dB` : unity;
   };
 }
-// Knob colours [body, pointer], as on the boards.
-const C = { red: ['#E2392F', '#fff'], grey: ['#3A3A3A', '#fff'], white: ['#F4F4F4', '#222'], teal: ['#59D3AE', '#123'],
-  sky: ['#7FA8E8', '#123'], yellow: ['#F3D417', '#222'], mblue: ['#1E88E5', '#fff'], green: ['#7ED321', '#123'],
-  amber: ['#F5B800', '#222'], silver: ['#BDBDBD', '#222'] };
-const knob = (k, label, [c, p], fmt, def = 0, hint = '') => ({ k, t: 'knob', label, c, p, fmt, def, hint });
+// How each knob looks, matched to David's photos (2026-11-02). Blue mixer: a coloured cap on a dark or grey
+// ridged skirt with a pointer line. Mackie: black knobs with a coloured pointer fin. c = cap, s = skirt, p = pointer, w = pointer width.
+const KL = {
+  red: { c: '#E2392F', s: '#2A2A2A', p: '#fff' }, eq: { c: '#2E2E2E', s: '#8E8E8E', p: '#fff' },
+  mfw: { c: '#F2F2F2', s: '#8E8E8E', p: '#333' }, teal: { c: '#59D3AE', s: '#2A2A2A', p: '#173A31' },
+  sky: { c: '#86A9E3', s: '#2A2A2A', p: '#172A47' }, yellow: { c: '#F3D417', s: '#2A2A2A', p: '#3A3000' },
+};
+const fin = p => ({ c: '#272727', s: '#121212', p, w: .26 });
+const MK = { white: fin('#F0F0F0'), blue: fin('#1E88E5'), green: fin('#7ED321'), yellow: fin('#F5B800'), grey: fin('#C8C8C8') };
+const knob = (k, label, look, fmt, def = 0, hint = '') => ({ k, t: 'knob', label, ...look, fmt, def, hint });
 const fader = (k, label, marks, unity, more) => ({ k, t: 'fader', label, marks, unity, fmt: fadeDb(marks, unity), def: 0, ...more });
 const btn = (k, label) => ({ k, t: 'btn', label, def: false });
 // A graphic EQ band: a small ±15 dB slider.
 const geq = f => ({ k: 'g' + f, t: 'fader', label: f, marks: [[0, -15], [.5, 0], [1, 15]], unity: '0', fmt: F.eq, def: .5, small: true });
-const EPM_EQ = [knob('hf', 'HF', C.grey, F.eq, .5, 'treble'), knob('mfq', 'MF freq', C.white, F.freq, .5, 'which mids'),
-  knob('mf', 'MF', C.grey, F.eq, .5, 'mids'), knob('lf', 'LF', C.grey, F.eq, .5, 'bass')];
-const MK_EQ = [knob('hi', 'Hi', C.mblue, F.eq, .5, '12 kHz'), knob('mid', 'Mid', C.mblue, F.eq, .5, '2.5 kHz'), knob('low', 'Low', C.mblue, F.eq, .5, '80 Hz')];
+const MK_EQ = [knob('hi', 'Hi', MK.blue, F.eq, .5, '12 kHz'), knob('mid', 'Mid', MK.blue, F.eq, .5, '2.5 kHz'), knob('low', 'Low', MK.blue, F.eq, .5, '80 Hz')];
 const CTRL = {
-  epm: [knob('gain', 'Gain', C.red, F.db(5, 60)), ...EPM_EQ, knob('aux1', 'Aux 1', C.teal, F.ten), knob('aux2', 'Aux 2', C.sky, F.ten),
-    knob('pan', 'Pan', C.yellow, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.epm, '0 dB')],
-  epmSt: [knob('gain', 'Gain', C.red, F.db(-10, 20)), EPM_EQ[0], EPM_EQ[3], knob('aux1', 'Aux 1', C.teal, F.ten), knob('aux2', 'Aux 2', C.sky, F.ten),
-    knob('pan', 'Balance', C.yellow, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.epm, '0 dB', { cap: '#3D5E93' })],
-  epmMain: [btn('p48', '48V phantom'), btn('aux1pre', 'Aux 1 pre'), btn('aux2pre', 'Aux 2 pre'),
-    fader('fader', 'Mix L/R', FADE.epmMix, '0 dB', { cap: '#F3D417' })],
-  mackie: [knob('gain', 'Gain', C.white, F.clock), btn('lowcut', 'Low cut 100 Hz'), ...MK_EQ, knob('mon', 'Mon', C.green, F.uni),
-    knob('fx', 'FX', C.amber, F.uni), knob('pan', 'Pan', C.silver, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U')],
-  mackieSt: [knob('gain', 'Gain', C.white, F.clock), ...MK_EQ, knob('mon', 'Mon', C.green, F.uni), knob('fx', 'FX', C.amber, F.uni),
-    knob('pan', 'Balance', C.silver, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U')],
-  mackieMain: [knob('fxmaster', 'FX master', C.amber, F.uni), knob('fxmon', 'FX to mon', C.green, F.uni), btn('fxmute', 'FX mute'),
-    btn('eqin', 'Graphic EQ in'), btn('eqmon', 'Graphic EQ on Mon'), btn('p48', '48V phantom'),
-    ...['125', '250', '500', '1k', '2k', '4k', '8k'].map(geq),
-    fader('fxrtn', 'FX return', FADE.mackie, 'U'), fader('mon', 'Mon', FADE.mackie, 'U'), fader('fader', 'Main', FADE.mackie, 'U')],
+  epm: [knob('gain', 'Gain', KL.red, F.db(5, 60)), knob('hf', 'HF', KL.eq, F.eq, .5, 'treble'), knob('mfq', 'MF freq', KL.mfw, F.freq, .5, 'which mids'),
+    knob('mf', 'MF', KL.eq, F.eq, .5, 'mids'), knob('lf', 'LF', KL.eq, F.eq, .5, 'bass'), knob('aux1', 'Aux 1', KL.teal, F.ten),
+    knob('aux2', 'Aux 2', KL.sky, F.ten), knob('pan', 'Pan', KL.yellow, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.epm, '0 dB')],
+  epmSt: [knob('gain', 'Gain', KL.red, F.db(-10, 20)), knob('hf', 'HF', KL.eq, F.eq, .5, 'treble'), knob('lf', 'LF', KL.eq, F.eq, .5, 'bass'),
+    knob('aux1', 'Aux 1', KL.teal, F.ten), knob('aux2', 'Aux 2', KL.sky, F.ten), knob('pan', 'Balance', KL.yellow, F.pan, .5),
+    btn('mute', 'Mute'), fader('fader', 'Fader', FADE.epm, '0 dB', { cap: '#5B7799' })],
+  epmMain: [btn('p48', '48V phantom'), knob('monlvl', 'Monitor', KL.red, F.ten), knob('phones', 'Phones', KL.red, F.ten),
+    btn('aux1pre', 'Aux 1 pre'), btn('aux2pre', 'Aux 2 pre'), btn('trkmon', '2-track → monitor'), btn('trkmix', '2-track → mix'),
+    fader('fader', 'Mix L', FADE.epmMix, '0 dB', { cap: '#F3D417' }), fader('faderR', 'Mix R', FADE.epmMix, '0 dB', { cap: '#F3D417', same: 'fader' })],
+  mackie: [knob('gain', 'Gain', MK.white, F.clock), btn('lowcut', 'Low cut 100 Hz'), ...MK_EQ, knob('mon', 'Mon', MK.green, F.uni),
+    knob('fx', 'FX', MK.yellow, F.uni), knob('pan', 'Pan', MK.grey, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U')],
+  mackieSt: [knob('gain', 'Gain', MK.white, F.clock), ...MK_EQ, knob('mon', 'Mon', MK.green, F.uni), knob('fx', 'FX', MK.yellow, F.uni),
+    knob('pan', 'Balance', MK.grey, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U')],
+  mackieMain: [btn('p48', '48V phantom'), btn('eqmon', 'Graphic EQ on Mon'), btn('eqin', 'Graphic EQ in'),
+    ...['125', '250', '500', '1k', '2k', '4k', '8k'].map(geq), btn('fxmute', 'FX mute'),
+    knob('usb', 'USB input', MK.white, F.uni), btn('usbthru', 'USB thru'), btn('brk', 'Break (mutes all)'),
+    knob('fxmaster', 'FX master', MK.yellow, F.uni), knob('fxmon', 'FX to mon', MK.green, F.uni), knob('phones', 'Phones', MK.white, F.ten),
+    knob('tape', 'Tape level', MK.white, F.uni), btn('stmute', 'ST return mute'),
+    fader('strtn', 'ST return', FADE.mackie, 'U'), fader('fxrtn', 'FX return', FADE.mackie, 'U'), fader('mon', 'Mon', FADE.mackie, 'U'),
+    fader('fader', 'Main', FADE.mackie, 'U', { main: true })],
+};
+// Where each control sits on the drawing, by the board's rows (1 = numbers, 2 = sockets, 3–10 = knob rows,
+// 11 = buttons, 12 = faders, 13 = tape). Master sections give [row, column] inside the master area.
+const FACE_ROWS = {
+  epm: { gain: 3, hf: 4, mfq: 5, mf: 6, lf: 7, aux1: 8, aux2: 9, pan: 10, mute: 11 },
+  epmSt: { gain: 5, hf: 6, lf: 7, aux1: 8, aux2: 9, pan: 10, mute: 11 },
+  mackie: { hiz: 1, gain: 3, lowcut: 4, hi: 5, mid: 6, low: 7, mon: 8, fx: 9, pan: 10, mute: 11 },
+  epmMain: { p48: [2, 1], monlvl: [7, 1], phones: [7, 2], aux1pre: [8, 1], aux2pre: [9, 1], trkmon: [10, 1], trkmix: [11, 1], fader: [12, 1], faderR: [12, 2] },
+  mackieMain: { p48: [2, 4], eqmon: [6, 1], eqin: [6, 3], usb: [8, 3], usbthru: [9, 3], brk: [9, 4], fxmaster: [10, 1], fxmon: [10, 2],
+    phones: [10, 3], tape: [10, 4], stmute: [11, 1], strtn: [12, 1], fxrtn: [12, 2], mon: [12, 3], fader: [12, 4] },
 };
 // Every strip of the setup, in board order, each mixer's master last.
 function knobStrips(L) {
@@ -760,17 +779,20 @@ function knobStrips(L) {
   for (const mx of MIX[L.setup]) {
     mx.strips.forEach((label, i) => {
       const key = mx.id + (i + 1), xlr = i < mx.xlr;
-      let ctrls = mx.look === 'epm' ? (xlr ? CTRL.epm : CTRL.epmSt) : CTRL.mackie;
+      const type = mx.look === 'epm' ? (xlr ? 'epm' : 'epmSt') : 'mackie';
+      let ctrls = CTRL[type];
       if (mx.look === 'mackie' && i === 0) ctrls = [ctrls[0], btn('hiz', 'Line Hi-Z'), ...ctrls.slice(1)];
-      out.push({ key, mx, label, xlr, name: L.chName(key), ctrls });
+      out.push({ key, mx, type, label, xlr, name: L.chName(key), ctrls });
     });
-    if (mx.ret) out.push({ key: mx.id + 'ret', mx, label: mx.ret, ret: true, name: `${mx.short} ${mx.ret}`, what: 'Blue mixer (stereo submix)', ctrls: CTRL.mackieSt });
-    out.push({ key: mx.id + 'main', mx, main: true, name: `${mx.name} master`, what: mx.model, ctrls: mx.look === 'epm' ? CTRL.epmMain : CTRL.mackieMain });
+    if (mx.ret) out.push({ key: mx.id + 'ret', mx, type: 'mackie', label: mx.ret, ret: true, name: `${mx.short} ${mx.ret}`, what: 'Blue mixer (stereo submix)', ctrls: CTRL.mackieSt });
+    const type = mx.look + 'Main';
+    out.push({ key: mx.id + 'main', mx, type, main: true, name: `${mx.name} master`, what: mx.model, ctrls: CTRL[type] });
   }
   return out;
 }
 const knobVals = (s, key) => s.mix?.knobs?.[key] || {};
-const ctrlVal = (vals, c) => vals[c.k] ?? c.def;
+// (Mix R follows Mix L until it's set on its own.)
+const ctrlVal = (vals, c) => vals[c.k] ?? (c.same && vals[c.same]) ?? c.def;
 // One line of what's been set (left out: anything still where it starts).
 function knobSummary(st, vals) {
   const parts = [];
@@ -792,55 +814,87 @@ function setKnob(key, k, v) {
     s.mix = { ...(s.mix || {}), knobs: kn };
   });
 }
-// A drawing of the mixer's top panel: each strip with its socket, knobs, mute and fader where they were set, and a
-// tape label of what's plugged in, like the masking tape under the faders. Tapping a strip opens its settings.
+// A drawing of the whole board, laid out on its real rows so it can be matched by eye: every knob with its pointer,
+// every button (lit when on), every fader with its scale and where it was set, and a tape label of what's plugged
+// into each channel. Tapping a strip (or the master section) opens its settings.
+function faceKnob(c, v) {
+  const i = el('i', 'kn');
+  i.style.cssText = `--c:${c.c};--s:${c.s};--p:${c.p};--pw:${c.w || .11};--a:${-150 + v * 300}deg`;
+  return i;
+}
+function faceFader(c, v) {
+  const f = el('span', 'fd' + (c.main ? ' main' : ''));
+  for (const [pos, d] of c.marks) if (d !== null) {
+    const b = el('b', d === 0 ? 'u' : '');
+    b.style.setProperty('--pos', pos);
+    f.append(b);
+  }
+  const i = el('i');
+  i.style.setProperty('--v', v);
+  if (c.cap) i.style.background = c.cap;
+  f.append(i);
+  return f;
+}
+const faceBtn = (cls, on) => el('span', `bt ${cls}${on ? ' on' : ''}`);
 function mixerFace(mx, L, s) {
   const face = el('div', `face ${mx.look}`);
   face.setAttribute('aria-hidden', 'true');
-  const kn = (c, v) => {
-    const i = el('i', 'kn');
-    i.style.cssText = `--c:${c.c};--p:${c.p};--a:${-150 + v * 300}deg`;
-    return i;
-  };
-  const fd = (v, cap) => {
-    const f = el('span', 'fader'), i = el('i');
-    i.style.setProperty('--v', v);
-    if (cap) i.style.background = cap;
-    f.append(i);
-    return f;
-  };
   for (const st of knobStrips(L).filter(x => x.mx === mx)) {
-    const vals = knobVals(s, st.key);
-    const val = k => ctrlVal(vals, st.ctrls.find(c => c.k === k));
+    const vals = knobVals(s, st.key), rows = FACE_ROWS[st.type];
+    const cells = new Map();
+    const add = (r, col, n, rs = 1, cs = 1) => {
+      const key = `${r},${col}`;
+      if (!cells.has(key)) cells.set(key, { r, col, rs, cs, nodes: [] });
+      cells.get(key).nodes.push(n);
+    };
+    const ctrl = c => c.t === 'knob' ? faceKnob(c, ctrlVal(vals, c)) : c.t === 'fader' ? faceFader(c, ctrlVal(vals, c))
+      : faceBtn(c.k === 'mute' ? 'mute' : c.k === 'hiz' || c.k === 'lowcut' ? 'sm' : '', vals[c.k]);
     let node;
     if (st.main) {
       node = el('div', 'master');
+      for (const c of st.ctrls) if (rows[c.k]) add(...rows[c.k], ctrl(c));
+      const led = on => el('i', 'led' + (on ? ' on' : ''));
       if (mx.look === 'mackie') {
+        const eq = el('span', 'geq');
+        for (const c of st.ctrls.filter(x => x.small)) {
+          const b = el('span', 'band');
+          b.append(faceFader(c, ctrlVal(vals, c)), el('small', null, c.label));
+          eq.append(b);
+        }
+        add(2, 1, eq, 4, 3);
         const fx = el('span', 'fxbox');
-        fx.append(el('span', 'led', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--'));
-        const ks = el('span', 'knobs');
-        for (const c of st.ctrls) if (c.t === 'knob') ks.append(kn(c, ctrlVal(vals, c)));
-        node.append(fx, ks);
+        fx.append(el('span', 'led7', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--'), faceKnob({ c: '#272727', s: '#121212', p: 'transparent' }, 0),
+          ctrl(st.ctrls.find(c => c.k === 'fxmute')));
+        add(7, 1, fx, 3, 2);
+        add(2, 4, led(vals.p48));
+        add(4, 4, el('span', 'meter'), 4, 1);
+        ['ST RTN', 'FX RTN', 'MON', 'MAIN'].forEach((t, i) => add(13, i + 1, el('span', 'plabel', t)));
       } else {
-        const meter = el('span', 'meter');
-        meter.append(el('i'), el('i'));
-        node.append(meter);
+        add(2, 1, led(vals.p48));
+        add(4, 1, el('span', 'logo', 'EPM 8'), 2, 2);
+        add(8, 2, el('span', 'meter'), 4, 1);
+        ['MIX L', 'MIX R'].forEach((t, i) => add(13, i + 1, el('span', 'plabel', t)));
       }
-      const fds = el('span', 'mains');
-      for (const c of st.ctrls.filter(x => x.t === 'fader' && !x.small)) fds.append(fd(ctrlVal(vals, c), c.cap));
-      if (mx.look === 'epm') fds.append(fd(val('fader'), '#F3D417'));   // the L and R faders move together
-      node.append(fds, el('span', 'tape', 'Main'));
     } else {
       const k = L.at[st.key] || '', inp = L.byKey.get(k);
       const tape = st.ret ? 'Blue mix' : inp ? inp.tape : k.slice(5);
-      node = el('div', `strip ${st.xlr ? 'xlr' : 'stereo'}${tape ? '' : ' empty'}${inp && L.where(k).length > 1 ? ' twice' : ''}`);
+      node = el('div', `strip${tape ? '' : ' empty'}${inp && L.where(k).length > 1 ? ' twice' : ''}`);
       const kc = st.ret ? 'var(--accent)' : inp && `var(--k-${inp.m.kind})`;
       if (kc) node.style.setProperty('--kc', kc);
-      const ks = el('span', 'knobs');
-      for (const c of st.ctrls) if (c.t === 'knob') ks.append(kn(c, ctrlVal(vals, c)));
-      const f = st.ctrls.find(c => c.t === 'fader');
-      node.append(el('span', 'num', st.label.replace('St ', 'ST')), el('span', 'jack'), ks,
-        el('span', 'mute' + (vals.mute ? ' on' : '')), fd(ctrlVal(vals, f), f.cap), el('span', 'tape', tape));
+      add(1, 1, el('span', 'num', st.label.replace('St ', 'ST')));
+      if (st.type === 'epmSt') { add(2, 1, el('span', 'jack')); add(3, 1, el('span', 'jack')); }
+      else add(2, 1, el('span', st.xlr ? 'jack xlr' : 'jack'));
+      if (st.type === 'epm' || st.type === 'epmSt') add(11, 1, faceBtn('pfl'));
+      else add(11, 1, el('i', 'led'));   // the Mackie's OL light
+      for (const c of st.ctrls) add(c.t === 'fader' ? 12 : rows[c.k], 1, ctrl(c));
+      add(13, 1, el('span', 'tape', tape));
+    }
+    for (const { r, col, rs, cs, nodes } of cells.values()) {
+      const cell = el('span', 'cell');
+      cell.style.gridRow = `${r} / span ${rs}`;
+      if (st.main) cell.style.gridColumn = `${col} / span ${cs}`;
+      cell.append(...nodes);
+      node.append(cell);
     }
     node.addEventListener('click', () => openKnobs(st.key));
     face.append(node);
@@ -885,13 +939,9 @@ function mixFlow(L, s) {
   return wrap;
 }
 
-/* The printout: page 1 = signal flow + both boards drawn as set; page 2 = a settings sheet, one row per channel
+/* The printout: page 1 = signal flow + the blue board drawn as set; page 2 = the Mackie; then a settings sheet, one row per channel
    (blank boxes on strips with nothing set, to write in at rehearsal) and each master section. */
-function miniKnob(c, v) {
-  const i = el('i', 'kn');
-  i.style.cssText = `--c:${c.c};--p:${c.p};--a:${-150 + v * 300}deg`;
-  return i;
-}
+const miniKnob = faceKnob;
 function miniFader(v) {
   const f = el('span', 'mfd'), i = el('i');
   i.style.setProperty('--v', v);
@@ -1152,10 +1202,10 @@ function knobSvg(v, c) {
   const pt = (deg, r) => { const a = deg * Math.PI / 180; return `${(Math.sin(a) * r).toFixed(1)} ${(-Math.cos(a) * r).toFixed(1)}`; };
   let ticks = '';
   for (let i = 0; i <= 10; i++) ticks += `M${pt(-150 + i * 30, 41)}L${pt(-150 + i * 30, 48)}`;
-  const a = -150 + v * 300;
+  const a = -150 + v * 300, w = c.w ? 13 : 5;
   return `<svg viewBox="-50 -50 100 100"><path d="${ticks}" stroke="currentColor" stroke-width="2.5" opacity=".5"/>`
-    + `<circle r="35" fill="${c.c}" stroke="rgba(0,0,0,.45)" stroke-width="2"/>`
-    + `<path d="M${pt(a, 6)}L${pt(a, 31)}" stroke="${c.p}" stroke-width="6" stroke-linecap="round"/></svg>`;
+    + `<circle r="36" fill="${c.s}" stroke="rgba(0,0,0,.45)" stroke-width="2"/><circle r="24" fill="${c.c}"/>`
+    + `<path d="M${pt(a, c.w ? 4 : 0)}L${pt(a, 33)}" stroke="${c.p}" stroke-width="${w}" stroke-linecap="round"/></svg>`;
 }
 // Drag up/down (full range over `span()` px), arrow keys and the mouse wheel change it; a double tap resets it.
 function dragValue(node, c, get, set, commit, span) {
@@ -1212,7 +1262,7 @@ function drawKnobs() {
   const left = el('div', 'kb-left'), btns = el('div', 'kb-btns'), knobs = el('div', 'kb-knobs'), geqs = el('div', 'kb-geq'), faders = el('div', 'kb-faders');
   for (const c of st.ctrls) {
     let v = ctrlVal(vals, c);
-    const save = () => { if (v !== ctrlVal(knobVals(currentShow(), st.key), c)) setKnob(st.key, c.k, v === c.def ? undefined : v); };
+    const save = () => { if (v !== ctrlVal(knobVals(currentShow(), st.key), c)) setKnob(st.key, c.k, v === c.def && !c.same ? undefined : v); };
     if (c.t === 'btn') {
       const b = el('button', 'btn small ktog' + (c.k === 'mute' ? ' mute' : ''), c.label);
       b.type = 'button';
