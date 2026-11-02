@@ -194,6 +194,7 @@ applyTheme(savedTheme());
         <button type="button" data-setup="one">Blue mixer only</button>
       </div>
       <button type="button" class="btn small" id="mix-redo">Renumber from the stage plot</button>
+      <select id="knob-copy" class="btn small" aria-label="Copy knob and fader settings from another gig" hidden></select>
       <p class="cap">Blue → Mackie: vocals on the blue Soundcraft, submixed into Mackie 7/8 so the Mackie's effects reach them; instruments on the Mackie. Pick what goes on each channel (tap a strip in the picture to jump to it). New players go on the first spare channel. A warning shows if someone has no channel or is on two.</p>
     </div>
     <h3 class="print-only print-title" id="mixer-print-title"></h3>
@@ -307,6 +308,22 @@ applyTheme(savedTheme());
     <p class="cap" id="who-inst"></p>
     <span class="lbl">What they need on stage</span>
     <ul class="who-gear" id="who-gear"></ul>
+  </div>
+</dialog>
+
+<!-- Knob and fader settings for one channel (tap a strip on the Mixer page) -->
+<dialog id="knob-dlg" class="sheet knob-sheet">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <div class="knob-nav">
+        <button type="button" class="icon-btn" id="knob-prev" aria-label="Previous channel">‹</button>
+        <div><h2 id="knob-title"></h2><p class="cap" id="knob-sub"></p></div>
+        <button type="button" class="icon-btn" id="knob-next" aria-label="Next channel">›</button>
+      </div>
+      <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="knob-body" id="knob-body"></div>
+    <div id="knob-foot" class="knob-foot"></div>
   </div>
 </dialog>
 
@@ -447,7 +464,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v48';
+window.APP_VERSION = 'v49';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

@@ -80,6 +80,12 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
   tapping a strip jumps to its row. `show.mix.fx` = the Mackie FX preset (1–16), shown on its LED. Data: `show.mix` (`setup`, `ch` = channel → input,
   `known` = inputs there when channels were last set, `out`, `monitors`, `fx`); unsaved channels fill in stage order, left to right, vocals first;
   any change saves the whole layout so channels stay put, and only new inputs go on a spare channel by themselves.
+  **Knob and fader settings** (David, 2026-11-02, for the last rehearsal; iPad + laptop first, phones only need to not break):
+  tap a strip (or its row's Knobs button, or Master knobs) for a pop-up of that strip's real controls (`CTRL`: big knobs,
+  buttons, faders; Mackie master has FX master/to-mon, graphic EQ 7 bands, FX return/Mon/Main faders); ‹ › step through the board.
+  Drag up/down, arrow keys or wheel; double-tap resets; saved on release. `show.mix.knobs` = { strip: { control: 0–1 / true, note } },
+  strip = slot or `Amain`/`Bmain`/`Bret`/`main`. The drawings show every knob's pointer, fader and lit mute; rows show a summary.
+  Readouts follow the printed scales only roughly (Mackie gain = clock position). "Copy knob settings from…" copies another gig's.
   Picking an input never swaps: the page warns (red) when an input has no channel or is on two (David's wish, 2026-10-24). The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
   The Gear tab's PA section adds the mixers, their power cables and (Blue → Mackie) the 2 XLR-to-1/4" submix cables (`mixerGear`).
   **Monitors** (2026-10-25, David): NOT per player. A "Monitor" dropdown on the master mixer card (Mackie MON SEND; blue mixer alone: AUX 1 OUT): No monitor /

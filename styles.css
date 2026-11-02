@@ -232,49 +232,100 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .mixer { background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); padding: 14px; min-width: 0; }
 .mixer.epm { flex: 12 1 330px; border-color: #4A68B0; }
 .mixer.mackie { flex: 8 1 280px; border-color: #39A84A; }
-/* The drawing of each mixer's top panel (its real colours, so the same in light and dark) */
-.face { display: flex; gap: 2px; padding: 8px 6px 6px; border-radius: 8px; margin: 0 0 12px; }
-.face.epm { background: #23325C; --lab: #DCE1EC; --cap: #F2F2EE; }
-.face.mackie { background: #1A1B1B; --lab: #ECECEC; --cap: #2C2C2C; }
-.strip { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 0 3px; border-radius: 4px; cursor: pointer; }
-.strip:hover { background: rgba(255, 255, 255, .08); }
-.strip.ret { cursor: default; }
-.strip .num { font: 700 11px/1 var(--f-body); color: var(--lab); white-space: nowrap; padding: 2px 0; }
+/* The drawing of each mixer's top panel (its real colours, so the same in light and dark). Sizes follow the
+   drawing's width (--u ≈ one strip), so it's big on an iPad or laptop and still fits a phone. */
+.face { container-type: inline-size; display: flex; gap: 2px; padding: 8px 6px 6px; border-radius: 8px; margin: 0 0 12px; }
+.face.epm { background: #23325C; --lab: #DCE1EC; --cap: #F2F2EE; max-width: 1000px; }
+.face.mackie { background: #1A1B1B; --lab: #ECECEC; --cap: #2C2C2C; max-width: 680px; }
+.face > * { --u: 8.6cqw; --ks: clamp(10px, calc(var(--u) * .42), 30px); }
+.face.mackie > * { --u: 13.5cqw; }
+.strip { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(var(--ks) * .3); padding: 0 0 3px; border-radius: 4px; cursor: pointer; }
+.strip:hover, .face .master:hover { background: rgba(255, 255, 255, .08); }
+.strip .num { font: 700 clamp(11px, calc(var(--u) * .17), 15px)/1 var(--f-body); color: var(--lab); white-space: nowrap; padding: 2px 0; }
 .face.epm .strip .num { align-self: stretch; text-align: center; background: #E4E4E0; color: #1E1B18; border-radius: 2px; }
-.strip .jack { width: 14px; height: 14px; border-radius: 50%; background: #0E0E0E; border: 2px solid #A2A8B0; }
-.strip.stereo .jack { width: 10px; height: 10px; margin: 2px 0; border-color: #D4D8DE; }
-.strip .knobs { display: grid; gap: 3px; justify-items: center; }
-.strip .knobs i { width: 11px; height: 11px; border-radius: 50%; background: #3A3A3A; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); }
-.face.epm .knobs .gain { background: #E2392F; } .face.epm .knobs .eq { background: #3A3A3A; box-shadow: 0 0 0 2px #9A9A9A; }
-.face.epm .knobs .mf { background: #F4F4F4; } .face.epm .knobs .aux1 { background: #59D3AE; }
-.face.epm .knobs .aux2 { background: #7FA8E8; } .face.epm .knobs .pan { background: #F3D417; }
-.face.mackie .knobs .gain { background: #F1F1F1; } .face.mackie .knobs .eq { background: #1E88E5; }
-.face.mackie .knobs .mon { background: #7ED321; } .face.mackie .knobs .fx { background: #F5B800; } .face.mackie .knobs .pan { background: #BDBDBD; }
-.strip .mute { width: 12px; height: 7px; border-radius: 2px; background: #D8352A; }
-.face.mackie .strip .mute { background: #A5A5A5; }
-.face .fader { position: relative; flex: none; width: 4px; height: 64px; margin-top: auto; background: #070707; border-radius: 2px; }
-.face .fader i { position: absolute; left: 50%; bottom: 30%; width: 14px; height: 10px; transform: translateX(-50%);
+.strip .jack { width: clamp(14px, calc(var(--u) * .3), 26px); aspect-ratio: 1; border-radius: 50%; background: #0E0E0E; border: 2px solid #A2A8B0; }
+.strip.stereo .jack { width: clamp(10px, calc(var(--u) * .2), 18px); border-color: #D4D8DE; }
+.face .knobs { display: grid; gap: calc(var(--ks) * .28); justify-items: center; }
+.face .kn { position: relative; width: var(--ks); height: var(--ks); border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px rgba(0, 0, 0, .4); }
+.face .kn::after { content: ''; position: absolute; left: 50%; top: 6%; width: max(2px, calc(var(--ks) * .11)); height: 44%; margin-left: calc(max(2px, calc(var(--ks) * .11)) / -2);
+  background: var(--p); border-radius: 1px; transform-origin: 50% 100%; transform: rotate(var(--a)); }
+.strip .mute { width: calc(var(--ks) * 1.1); height: calc(var(--ks) * .6); border-radius: 2px; background: #B4372E; }
+.face.mackie .strip .mute { background: #8E8E8E; }
+.strip .mute.on { background: #FF3B30; box-shadow: 0 0 6px 2px rgba(255, 59, 48, .8); }
+.face .fader { position: relative; flex: none; width: clamp(4px, calc(var(--u) * .07), 7px); height: clamp(64px, calc(var(--u) * 1.9), 160px); margin-top: auto;
+  background: #070707; border-radius: 2px; --cw: clamp(14px, calc(var(--u) * .45), 34px); }
+.face .fader i { position: absolute; left: 50%; bottom: calc((100% - var(--cw) * .7) * var(--v, 0)); width: var(--cw); height: calc(var(--cw) * .7); transform: translateX(-50%);
   background: var(--cap); border-radius: 2px; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .3), 0 0 0 1px rgba(255, 255, 255, .15); }
-.strip.empty .fader i { bottom: 2%; }
-.face.epm .strip.stereo .fader i { background: #3D5E93; }
-.face.epm .mains .fader i { background: #F3D417; }
+.face.mackie .fader i::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #DDD; }
 /* Masking tape under the faders, written on in marker */
-.face .tape { flex: none; writing-mode: vertical-rl; transform: rotate(180deg); height: 72px; width: 100%; max-width: 20px;
-  background: #F1E7C8; color: #1E1B18; font: 700 11px/1 var(--f-body); padding: 4px 0; border-radius: 1px; text-align: center;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: inset 0 -4px 0 var(--kc, #F1E7C8); }
+.face .tape { flex: none; writing-mode: vertical-rl; transform: rotate(180deg); height: clamp(72px, calc(var(--u) * 1.25), 110px); width: 100%;
+  max-width: clamp(20px, calc(var(--u) * .38), 30px); background: #F1E7C8; color: #1E1B18; font: 700 clamp(11px, calc(var(--u) * .2), 15px)/1 var(--f-body);
+  padding: 4px 0; border-radius: 1px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: inset 0 -4px 0 var(--kc, #F1E7C8); }
 .strip.empty .tape { background: transparent; box-shadow: none; }
 .strip.twice .tape { background: #F6C9C5; }
-.face .master { flex: 1.6 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 0 3px 6px;
-  border-left: 1px solid rgba(255, 255, 255, .14); }
+.face .master { flex: 1.6 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 0 3px 6px;
+  border-left: 1px solid rgba(255, 255, 255, .14); border-radius: 4px; cursor: pointer; }
+.face.mackie .master { flex-grow: 2.4; }
 .face .meter { display: flex; gap: 3px; margin-top: 14px; }
-.face .meter i { width: 5px; height: 80px; border-radius: 2px; background: linear-gradient(#E53935 0 12%, #FFA000 12% 30%, #43A047 30%); opacity: .85; }
-.face .fxbox { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 4px; padding: 5px; border: 2px solid #39B54A; border-radius: 4px; }
-.face .led { font: 700 16px/1 ui-monospace, Menlo, monospace; color: #6BFF6B; background: #071407; padding: 3px 4px; border-radius: 2px; letter-spacing: 1px; }
-.face .fxbox i { width: 16px; height: 16px; border-radius: 50%; background: #111; box-shadow: 0 0 0 2px #4A4A4A; }
-.face .mains { display: flex; gap: 10px; margin-top: auto; }
-.face .mains .fader { margin-top: 0; }
-.mixer li.flash { animation: chflash 1.4s ease-out; }
-@keyframes chflash { from { background: var(--accent-soft); } }
+.face .meter i { width: clamp(5px, calc(var(--u) * .08), 8px); height: clamp(80px, calc(var(--u) * 2), 170px); border-radius: 2px;
+  background: linear-gradient(#E53935 0 12%, #FFA000 12% 30%, #43A047 30%); opacity: .85; }
+.face .fxbox { margin-top: 4px; padding: 5px; border: 2px solid #39B54A; border-radius: 4px; }
+.face .led { display: block; font: 700 clamp(16px, calc(var(--u) * .3), 24px)/1 ui-monospace, Menlo, monospace; color: #6BFF6B; background: #071407;
+  padding: 3px 4px; border-radius: 2px; letter-spacing: 1px; }
+.face .master .knobs { grid-auto-flow: column; }
+.face .mains { display: flex; gap: clamp(16px, calc(var(--u) * .5), 40px); margin-top: auto; }
+/* Under each channel row: a Knobs button and what's been set */
+.mixer li { flex-wrap: wrap; }
+.mixer li .knob-btn { flex: none; margin-left: auto; }
+.ksum { flex-basis: 100%; padding-left: 52px; color: var(--muted); font-size: 14px; }
+.master-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 12px 0 0; }
+.master-row .ksum { flex: 1 1 200px; padding: 0; }
+/* Laptops and iPads: one mixer per row, so the drawings are big; the channel list in columns */
+@media (min-width: 700px) {
+  .mixer.epm, .mixer.mackie { flex-basis: 100%; }
+  .mixer ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); column-gap: 24px; }
+}
+@media print { .knob-btn { display: none; } .ksum { padding-left: 0; } }
+
+/* The settings pop-up */
+dialog.sheet.knob-sheet { width: min(1040px, calc(100vw - 24px)); }
+.knob-nav { display: flex; align-items: center; gap: 4px; }
+.knob-nav h2 { font-size: 30px; }
+.knob-nav .cap { margin: 2px 0 0; }
+.knob-nav .icon-btn { font-size: 34px; line-height: 1; }
+.knob-body { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.kb-left { flex: 1 1 420px; min-width: 0; display: grid; gap: 12px; }
+.kb-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.ktog[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #1E1B18; }
+.ktog.mute[aria-pressed="true"] { background: var(--danger); border-color: var(--danger); color: #fff; }
+.ktog:disabled { opacity: 1; cursor: default; }
+.kb-knobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 10px; }
+.kcell, .fcell { display: grid; justify-items: center; align-content: start; gap: 4px; background: var(--bg); border-radius: 10px; padding: 8px 6px 10px; }
+.klab { font-weight: 700; font-size: 15px; text-align: center; line-height: 1.15; }
+.klab small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.kval { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kdial { width: 88px; height: 88px; border-radius: 50%; color: var(--ink); touch-action: none; cursor: ns-resize; }
+.kdial svg { display: block; width: 100%; height: 100%; }
+.kdial:focus-visible, .ftrack:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.kb-faders { display: flex; gap: 10px; flex: none; }
+.kb-geq { display: flex; flex-wrap: wrap; gap: 6px; }
+.fcell { padding: 8px 10px 10px; }
+.ftrack { --ch: 28px; position: relative; width: 76px; height: 300px; touch-action: none; cursor: ns-resize; border-radius: 6px; }
+.ftrack::before { content: ''; position: absolute; left: calc(50% + 8px); top: calc(var(--ch) / 2); bottom: calc(var(--ch) / 2); width: 6px; margin-left: -3px;
+  background: #111; border-radius: 3px; }
+.fmark { position: absolute; left: 0; width: calc(50% - 4px); text-align: right; padding-right: 12px; bottom: calc(var(--ch) / 2 + (100% - var(--ch)) * var(--pos));
+  transform: translateY(50%); font-size: 11px; line-height: 1; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fmark::after { content: ''; position: absolute; right: 2px; top: 50%; width: 7px; height: 1px; background: currentColor; }
+.fcap { position: absolute; left: calc(50% + 8px); width: 44px; height: var(--ch); margin-left: -22px; bottom: calc((100% - var(--ch)) * var(--v, 0));
+  background: #F2F2EE; border-radius: 4px; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .25), 0 2px 6px rgba(0, 0, 0, .35); }
+.fcap::after { content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 2px; background: rgba(0, 0, 0, .5); }
+.look-mackie .fcap { background: #2C2C2C; }
+.look-mackie .fcap::after { background: #EEE; }
+.fcell.small .ftrack { --ch: 18px; width: 54px; height: 170px; }
+.fcell.small .fcap { width: 26px; margin-left: -13px; }
+.knob-foot { margin-top: 14px; }
+.knob-foot .row-btns { margin-top: 10px; }
+.knob-note { font-weight: 700; margin: 0 0 6px; }
 .mixer h3 { font-size: 24px; text-transform: uppercase; }
 .mixer .role { color: var(--muted); margin: 2px 0 10px; }
 .mixer ol { list-style: none; margin: 0; padding: 0; }

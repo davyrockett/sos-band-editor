@@ -694,52 +694,157 @@ function setChannel(c, val) {
     v.mix = { ...mix, setup: L.setup, ch, known: [...L.byKey.keys()] };
   });
 }
-// A drawing of the mixer's top panel: each strip with its socket, knobs, mute, fader and a tape label
-// of what's plugged in, like the masking tape under the faders. Tapping a strip jumps to its row below.
+/* Knob, button and fader settings (David, 2026-11-02: to note where everything sat at the last rehearsal).
+   show.mix.knobs = { [strip]: { [control]: value, note } }. strip = a channel slot ('A3', 'B2', '7'), or the mixer's
+   letter + 'main' / 'ret' ('Amain', 'Bmain', 'Bret'; 'main' on one mixer). Knobs and faders are 0–1 (how far round
+   or up, as on the board), buttons true/false. Readouts follow the board's printed scale, roughly: the pointer is what to match. */
+const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n);
+const F = {
+  eq: v => { const d = Math.round((v - .5) * 30); return d ? `${sgn(d)} dB` : '0'; },
+  ten: v => String(Math.round(v * 20) / 2),
+  pan: v => { const d = Math.round((v - .5) * 20); return d ? `${d < 0 ? 'L' : 'R'} ${Math.abs(d)}` : 'Centre'; },
+  freq: v => { const f = 150 * (3500 / 150) ** v; return f >= 1000 ? `${(f / 1000).toFixed(1)} kHz` : `${Math.round(f / 10) * 10} Hz`; },
+  db: (a, b) => v => `${sgn(Math.round(a + v * (b - a)))} dB`,
+  // The Mackie's gain marks don't say much: give the pointer's clock position.
+  clock: v => { const m = Math.round((7 + v * 10) * 2) / 2, h = Math.floor(m) % 12 || 12; return m % 1 ? `${h}:30` : `${h} o'clock`; },
+  // Mackie MON and FX knobs: off … U (unity) at 12 o'clock … +15.
+  uni: v => v < .02 ? 'Off' : Math.abs(v - .5) < .02 ? 'U' : v > .5 ? `+${Math.round((v - .5) * 30)} dB` : `${sgn(Math.round(40 * Math.log10(v / .5)))} dB`,
+};
+// Fader scales as printed beside the faders: [how far up (0–1), dB]; null = ∞ (off).
+const FADE = {
+  epm: [[0, null], [.15, -30], [.25, -20], [.41, -10], [.54, -5], [.65, 0], [.77, 5], [1, 10]],
+  epmMix: [[0, null], [.14, -40], [.25, -30], [.4, -20], [.52, -15], [.65, -10], [.76, -5], [1, 0]],
+  mackie: [[0, null], [.1, -50], [.17, -40], [.28, -30], [.39, -20], [.59, -10], [.7, -5], [.81, 0], [.91, 5], [1, 10]],
+};
+function fadeDb(marks, unity) {
+  return v => {
+    if (v < .02) return 'Off';
+    const i = marks.findIndex(m => m[0] >= v);
+    const [p1, d1] = marks[i], [p0, d0] = marks[i - 1];
+    const lo = d0 ?? d1 - 20;   // between ∞ and the lowest mark
+    const d = Math.round(lo + (v - p0) / (p1 - p0) * (d1 - lo));
+    return d ? `${sgn(d)} dB` : unity;
+  };
+}
+// Knob colours [body, pointer], as on the boards.
+const C = { red: ['#E2392F', '#fff'], grey: ['#3A3A3A', '#fff'], white: ['#F4F4F4', '#222'], teal: ['#59D3AE', '#123'],
+  sky: ['#7FA8E8', '#123'], yellow: ['#F3D417', '#222'], mblue: ['#1E88E5', '#fff'], green: ['#7ED321', '#123'],
+  amber: ['#F5B800', '#222'], silver: ['#BDBDBD', '#222'] };
+const knob = (k, label, [c, p], fmt, def = 0, hint = '') => ({ k, t: 'knob', label, c, p, fmt, def, hint });
+const fader = (k, label, marks, unity, more) => ({ k, t: 'fader', label, marks, unity, fmt: fadeDb(marks, unity), def: 0, ...more });
+const btn = (k, label) => ({ k, t: 'btn', label, def: false });
+// A graphic EQ band: a small ±15 dB slider.
+const geq = f => ({ k: 'g' + f, t: 'fader', label: f, marks: [[0, -15], [.5, 0], [1, 15]], unity: '0', fmt: F.eq, def: .5, small: true });
+const EPM_EQ = [knob('hf', 'HF', C.grey, F.eq, .5, 'treble'), knob('mfq', 'MF freq', C.white, F.freq, .5, 'which mids'),
+  knob('mf', 'MF', C.grey, F.eq, .5, 'mids'), knob('lf', 'LF', C.grey, F.eq, .5, 'bass')];
+const MK_EQ = [knob('hi', 'Hi', C.mblue, F.eq, .5, '12 kHz'), knob('mid', 'Mid', C.mblue, F.eq, .5, '2.5 kHz'), knob('low', 'Low', C.mblue, F.eq, .5, '80 Hz')];
+const CTRL = {
+  epm: [knob('gain', 'Gain', C.red, F.db(5, 60)), ...EPM_EQ, knob('aux1', 'Aux 1', C.teal, F.ten), knob('aux2', 'Aux 2', C.sky, F.ten),
+    knob('pan', 'Pan', C.yellow, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.epm, '0 dB')],
+  epmSt: [knob('gain', 'Gain', C.red, F.db(-10, 20)), EPM_EQ[0], EPM_EQ[3], knob('aux1', 'Aux 1', C.teal, F.ten), knob('aux2', 'Aux 2', C.sky, F.ten),
+    knob('pan', 'Balance', C.yellow, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.epm, '0 dB', { cap: '#3D5E93' })],
+  epmMain: [btn('p48', '48V phantom'), btn('aux1pre', 'Aux 1 pre'), btn('aux2pre', 'Aux 2 pre'),
+    fader('fader', 'Mix L/R', FADE.epmMix, '0 dB', { cap: '#F3D417' })],
+  mackie: [knob('gain', 'Gain', C.white, F.clock), btn('lowcut', 'Low cut 100 Hz'), ...MK_EQ, knob('mon', 'Mon', C.green, F.uni),
+    knob('fx', 'FX', C.amber, F.uni), knob('pan', 'Pan', C.silver, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U')],
+  mackieSt: [knob('gain', 'Gain', C.white, F.clock), ...MK_EQ, knob('mon', 'Mon', C.green, F.uni), knob('fx', 'FX', C.amber, F.uni),
+    knob('pan', 'Balance', C.silver, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U')],
+  mackieMain: [knob('fxmaster', 'FX master', C.amber, F.uni), knob('fxmon', 'FX to mon', C.green, F.uni), btn('fxmute', 'FX mute'),
+    btn('eqin', 'Graphic EQ in'), btn('eqmon', 'Graphic EQ on Mon'), btn('p48', '48V phantom'),
+    ...['125', '250', '500', '1k', '2k', '4k', '8k'].map(geq),
+    fader('fxrtn', 'FX return', FADE.mackie, 'U'), fader('mon', 'Mon', FADE.mackie, 'U'), fader('fader', 'Main', FADE.mackie, 'U')],
+};
+// Every strip of the setup, in board order, each mixer's master last.
+function knobStrips(L) {
+  const out = [];
+  for (const mx of MIX[L.setup]) {
+    mx.strips.forEach((label, i) => {
+      const key = mx.id + (i + 1), xlr = i < mx.xlr;
+      let ctrls = mx.look === 'epm' ? (xlr ? CTRL.epm : CTRL.epmSt) : CTRL.mackie;
+      if (mx.look === 'mackie' && i === 0) ctrls = [ctrls[0], btn('hiz', 'Line Hi-Z'), ...ctrls.slice(1)];
+      out.push({ key, mx, label, xlr, name: L.chName(key), ctrls });
+    });
+    if (mx.ret) out.push({ key: mx.id + 'ret', mx, label: mx.ret, ret: true, name: `${mx.short} ${mx.ret}`, what: 'Blue mixer (stereo submix)', ctrls: CTRL.mackieSt });
+    out.push({ key: mx.id + 'main', mx, main: true, name: `${mx.name} master`, what: mx.model, ctrls: mx.look === 'epm' ? CTRL.epmMain : CTRL.mackieMain });
+  }
+  return out;
+}
+const knobVals = (s, key) => s.mix?.knobs?.[key] || {};
+const ctrlVal = (vals, c) => vals[c.k] ?? c.def;
+// One line of what's been set (left out: anything still where it starts).
+function knobSummary(st, vals) {
+  const parts = [];
+  for (const c of st.ctrls) {
+    const v = vals[c.k];
+    if (v === undefined || v === c.def) continue;
+    if (c.t === 'btn') parts.push(c.label);
+    else parts.push(`${c.label} ${c.fmt(v)}`);
+  }
+  if (vals.note) parts.push(`“${vals.note}”`);
+  return parts.join(' · ');
+}
+function setKnob(key, k, v) {
+  patchShow(s => {
+    const kn = { ...(s.mix?.knobs || {}) };
+    const row = { ...(kn[key] || {}) };
+    if (v === undefined || v === '') delete row[k]; else row[k] = v;
+    if (Object.keys(row).length) kn[key] = row; else delete kn[key];
+    s.mix = { ...(s.mix || {}), knobs: kn };
+  });
+}
+// A drawing of the mixer's top panel: each strip with its socket, knobs, mute and fader where they were set, and a
+// tape label of what's plugged in, like the masking tape under the faders. Tapping a strip opens its settings.
 function mixerFace(mx, L, s) {
   const face = el('div', `face ${mx.look}`);
   face.setAttribute('aria-hidden', 'true');
-  const knobs = mx.look === 'epm' ? ['gain', 'eq', 'mf', 'eq', 'aux1', 'aux2', 'pan'] : ['gain', 'eq', 'eq', 'eq', 'mon', 'fx', 'pan'];
-  const strip = (num, tape, kc, cls, c) => {
-    const st = el('div', 'strip ' + cls);
-    if (kc) st.style.setProperty('--kc', kc);
-    const ks = el('span', 'knobs');
-    for (const k of knobs) ks.append(el('i', k));
-    const fd = el('span', 'fader');
-    fd.append(el('i'));
-    st.append(el('span', 'num', num), el('span', 'jack'), ks, el('span', 'mute'), fd, el('span', 'tape', tape));
-    if (c) st.addEventListener('click', () => {
-      const li = document.querySelector(`#mixers li[data-ch="${c}"]`);
-      if (!li) return;
-      li.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      li.classList.remove('flash');
-      void li.offsetWidth;
-      li.classList.add('flash');
-      li.querySelector('select')?.focus({ preventScroll: true });
-    });
-    return st;
+  const kn = (c, v) => {
+    const i = el('i', 'kn');
+    i.style.cssText = `--c:${c.c};--p:${c.p};--a:${-150 + v * 300}deg`;
+    return i;
   };
-  mx.strips.forEach((label, i) => {
-    const c = mx.id + (i + 1), k = L.at[c] || '', inp = L.byKey.get(k);
-    const tape = inp ? inp.tape : k.slice(5);
-    face.append(strip(label.replace('St ', 'ST'), tape, inp && `var(--k-${inp.m.kind})`,
-      (i < mx.xlr ? 'xlr' : 'stereo') + (tape ? '' : ' empty') + (inp && L.where(k).length > 1 ? ' twice' : ''), c));
-  });
-  if (mx.ret) face.append(strip(mx.ret, 'Blue mix', 'var(--accent)', 'stereo ret'));
-  const master = el('div', 'master');
-  if (mx.look === 'mackie') {
-    const fx = el('span', 'fxbox');
-    fx.append(el('span', 'led', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--'), el('i'));
-    master.append(fx);
-  } else {
-    const meter = el('span', 'meter');
-    for (let i = 0; i < 2; i++) meter.append(el('i'));
-    master.append(meter);
+  const fd = (v, cap) => {
+    const f = el('span', 'fader'), i = el('i');
+    i.style.setProperty('--v', v);
+    if (cap) i.style.background = cap;
+    f.append(i);
+    return f;
+  };
+  for (const st of knobStrips(L).filter(x => x.mx === mx)) {
+    const vals = knobVals(s, st.key);
+    const val = k => ctrlVal(vals, st.ctrls.find(c => c.k === k));
+    let node;
+    if (st.main) {
+      node = el('div', 'master');
+      if (mx.look === 'mackie') {
+        const fx = el('span', 'fxbox');
+        fx.append(el('span', 'led', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--'));
+        const ks = el('span', 'knobs');
+        for (const c of st.ctrls) if (c.t === 'knob') ks.append(kn(c, ctrlVal(vals, c)));
+        node.append(fx, ks);
+      } else {
+        const meter = el('span', 'meter');
+        meter.append(el('i'), el('i'));
+        node.append(meter);
+      }
+      const fds = el('span', 'mains');
+      for (const c of st.ctrls.filter(x => x.t === 'fader' && !x.small)) fds.append(fd(ctrlVal(vals, c), c.cap));
+      if (mx.look === 'epm') fds.append(fd(val('fader'), '#F3D417'));   // the L and R faders move together
+      node.append(fds, el('span', 'tape', 'Main'));
+    } else {
+      const k = L.at[st.key] || '', inp = L.byKey.get(k);
+      const tape = st.ret ? 'Blue mix' : inp ? inp.tape : k.slice(5);
+      node = el('div', `strip ${st.xlr ? 'xlr' : 'stereo'}${tape ? '' : ' empty'}${inp && L.where(k).length > 1 ? ' twice' : ''}`);
+      const kc = st.ret ? 'var(--accent)' : inp && `var(--k-${inp.m.kind})`;
+      if (kc) node.style.setProperty('--kc', kc);
+      const ks = el('span', 'knobs');
+      for (const c of st.ctrls) if (c.t === 'knob') ks.append(kn(c, ctrlVal(vals, c)));
+      const f = st.ctrls.find(c => c.t === 'fader');
+      node.append(el('span', 'num', st.label.replace('St ', 'ST')), el('span', 'jack'), ks,
+        el('span', 'mute' + (vals.mute ? ' on' : '')), fd(ctrlVal(vals, f), f.cap), el('span', 'tape', tape));
+    }
+    node.addEventListener('click', () => openKnobs(st.key));
+    face.append(node);
   }
-  const fds = el('span', 'mains');
-  for (let i = 0; i < (mx.look === 'epm' ? 2 : 1); i++) { const f = el('span', 'fader'); f.append(el('i')); fds.append(f); }
-  master.append(fds, el('span', 'tape', 'Main'));
-  face.append(master);
   return face;
 }
 function renderMixers(s) {
@@ -754,6 +859,21 @@ function renderMixers(s) {
   document.querySelectorAll('#mix-setup button').forEach(b => b.setAttribute('aria-pressed', b.dataset.setup === L.setup));
   $('mix-redo').disabled = !L.pinned;
   const label = inp => `${inp.m.name} — ${inp.what}`;
+  // Each row ends with a Knobs button and, under it, what's been set on that strip.
+  const strips = knobStrips(L);
+  const knobBits = (li, key) => {
+    const st = strips.find(x => x.key === key), sum = knobSummary(st, knobVals(s, key));
+    const b = el('button', 'btn small knob-btn', 'Knobs');
+    b.type = 'button';
+    b.setAttribute('aria-label', `Knobs and faders for ${st.name}`);
+    b.addEventListener('click', () => openKnobs(key));
+    li.append(b);
+    if (sum) li.append(el('span', 'ksum', sum));
+  };
+  const cp = $('knob-copy');
+  const from = shows().filter(x => x.id !== s.id && Object.keys(x.mix?.knobs || {}).length);
+  cp.hidden = !edit || !from.length;
+  cp.replaceChildren(new Option('Copy knob settings from…', ''), ...from.map(x => new Option(`${x.name} (${fmtDate(x.date, false)})`, x.id)));
   for (const mx of MIX[L.setup]) {
     const card = el('div', `mixer ${mx.look}`);
     card.append(el('h3', null, mx.name), el('p', 'role', mx.role), mixerFace(mx, L, s));
@@ -802,11 +922,13 @@ function renderMixers(s) {
         li.append(chip, el('span', 'what', inp.what));
       } else if (k.slice(5)) li.append(el('span', null, k.slice(5)));
       else li.append(el('span', 'spare', xlr ? 'spare' : 'spare (line only)'));
+      knobBits(li, c);
       ol.append(li);
     });
     if (mx.ret) {
       const li = el('li', 'ret');
       li.append(el('span', 'ch', mx.ret), el('span', null, 'Blue mixer (stereo submix from its mix out L/R)'));
+      knobBits(li, mx.id + 'ret');
       ol.append(li);
     }
     card.append(ol);
@@ -844,6 +966,13 @@ function renderMixers(s) {
       line('Out', master ? L.out : 'Mix out L/R (XLR) → Mackie 7/8 (2 XLR to 1/4" cables)');
       if (master && monitorCount(s)) line('Monitor', `${monitorCount(s) > 1 ? '2 stage monitors' : '1 stage monitor'} from ${mx.aux}`);
     }
+    const ms = el('div', 'master-row');
+    const mb = el('button', 'btn small knob-btn', 'Master knobs');
+    mb.type = 'button';
+    mb.addEventListener('click', () => openKnobs(mx.id + 'main'));
+    const msum = knobSummary(strips.find(x => x.key === mx.id + 'main'), knobVals(s, mx.id + 'main'));
+    ms.append(mb, el('span', 'ksum', msum || 'Master section not set yet'));
+    card.append(ms);
     if (mx.look === 'mackie') {
       const p = el('p', 'out fx-note');
       p.append(el('b', null, 'Effect: '), s.mix?.fx ? fxName(s.mix.fx) : 'not picked yet',
@@ -877,6 +1006,153 @@ $('mix-redo').addEventListener('click', () => {
     v.mix = { ...mix, ch };
   });
   toast('Channels now follow the stage plot, left to right: vocals first, then instruments.');
+});
+
+/* The settings pop-up for one strip: big knobs, buttons and faders, ‹ › to step through the board.
+   Drag a knob or fader up or down (or arrow keys / mouse wheel); a double tap puts it back. Saved when you let go. */
+let knobKey = '';
+function openKnobs(key) {
+  knobKey = key;
+  drawKnobs();
+  if (!$('knob-dlg').open) $('knob-dlg').showModal();
+}
+function knobSvg(v, c) {
+  const pt = (deg, r) => { const a = deg * Math.PI / 180; return `${(Math.sin(a) * r).toFixed(1)} ${(-Math.cos(a) * r).toFixed(1)}`; };
+  let ticks = '';
+  for (let i = 0; i <= 10; i++) ticks += `M${pt(-150 + i * 30, 41)}L${pt(-150 + i * 30, 48)}`;
+  const a = -150 + v * 300;
+  return `<svg viewBox="-50 -50 100 100"><path d="${ticks}" stroke="currentColor" stroke-width="2.5" opacity=".5"/>`
+    + `<circle r="35" fill="${c.c}" stroke="rgba(0,0,0,.45)" stroke-width="2"/>`
+    + `<path d="M${pt(a, 6)}L${pt(a, 31)}" stroke="${c.p}" stroke-width="6" stroke-linecap="round"/></svg>`;
+}
+// Drag up/down (full range over `span()` px), arrow keys and the mouse wheel change it; a double tap resets it.
+function dragValue(node, c, get, set, commit, span) {
+  node.tabIndex = 0;
+  node.setAttribute('role', 'slider');
+  node.setAttribute('aria-label', c.label);
+  let lastDown = 0, timer = 0;
+  const later = () => { clearTimeout(timer); timer = setTimeout(commit, 500); };
+  const to = v => set(Math.round(Math.min(1, Math.max(0, v)) * 1000) / 1000);
+  node.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    node.focus({ preventScroll: true });
+    if (e.timeStamp - lastDown < 300) { to(c.def); commit(); lastDown = 0; return; }
+    lastDown = e.timeStamp;
+    dragging = true;
+    node.setPointerCapture(e.pointerId);
+    const y0 = e.clientY, v0 = get();
+    const move = ev => to(v0 + (y0 - ev.clientY) / span());
+    const up = () => {
+      node.removeEventListener('pointermove', move);
+      node.removeEventListener('pointerup', up);
+      node.removeEventListener('pointercancel', up);
+      commit();
+      setTimeout(() => { dragging = false; renderIfWaiting(); });
+    };
+    node.addEventListener('pointermove', move);
+    node.addEventListener('pointerup', up);
+    node.addEventListener('pointercancel', up);
+  });
+  node.addEventListener('keydown', e => {
+    const step = { ArrowUp: .02, ArrowRight: .02, ArrowDown: -.02, ArrowLeft: -.02, PageUp: .1, PageDown: -.1 }[e.key];
+    if (step) to(get() + step * (e.shiftKey ? .25 : 1));
+    else if (e.key === 'Home') to(0);
+    else if (e.key === 'End') to(1);
+    else return;
+    e.preventDefault();
+    later();
+  });
+  node.addEventListener('wheel', e => { e.preventDefault(); to(get() - e.deltaY / 800); later(); }, { passive: false });
+}
+function drawKnobs() {
+  const s = currentShow();
+  const L = s && mixLayout(s), all = s ? knobStrips(L) : [], at = all.findIndex(x => x.key === knobKey), st = all[at];
+  if (!st) { $('knob-dlg').close(); return; }
+  const edit = canEdit(), vals = knobVals(s, st.key);
+  const k = L.at[st.key] || '', inp = L.byKey.get(k);
+  $('knob-title').textContent = st.name;
+  $('knob-sub').textContent = st.what || (inp ? `${inp.m.name} — ${inp.what}` : k.slice(5) || 'Spare');
+  $('knob-prev').onclick = () => openKnobs(all[(at - 1 + all.length) % all.length].key);
+  $('knob-next').onclick = () => openKnobs(all[(at + 1) % all.length].key);
+  const body = $('knob-body');
+  body.className = `knob-body look-${st.mx.look}`;
+  body.replaceChildren();
+  const left = el('div', 'kb-left'), btns = el('div', 'kb-btns'), knobs = el('div', 'kb-knobs'), geqs = el('div', 'kb-geq'), faders = el('div', 'kb-faders');
+  for (const c of st.ctrls) {
+    let v = ctrlVal(vals, c);
+    const save = () => { if (v !== ctrlVal(knobVals(currentShow(), st.key), c)) setKnob(st.key, c.k, v === c.def ? undefined : v); };
+    if (c.t === 'btn') {
+      const b = el('button', 'btn small ktog' + (c.k === 'mute' ? ' mute' : ''), c.label);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', Boolean(v));
+      if (edit) b.addEventListener('click', () => { v = !v; b.setAttribute('aria-pressed', v); save(); });
+      else b.disabled = true;
+      btns.append(b);
+      continue;
+    }
+    const cell = el('div', c.t === 'knob' ? 'kcell' : 'fcell' + (c.small ? ' small' : ''));
+    const lab = el('span', 'klab', c.label);
+    if (c.hint) lab.append(el('small', null, c.hint));
+    const out = el('span', 'kval');
+    let ctl;
+    if (c.t === 'knob') {
+      ctl = el('div', 'kdial');
+    } else {
+      ctl = el('div', 'ftrack');
+      for (const [pos, d] of c.marks) {
+        const m = el('span', 'fmark', d === null ? '∞' : d === 0 ? c.unity.replace(' dB', '') : sgn(d));
+        m.style.setProperty('--pos', pos);
+        ctl.append(m);
+      }
+      const cap = el('i', 'fcap');
+      if (c.cap) cap.style.background = c.cap;
+      ctl.append(cap);
+    }
+    const draw = () => {
+      if (c.t === 'knob') ctl.innerHTML = knobSvg(v, c);
+      else ctl.querySelector('.fcap').style.setProperty('--v', v);
+      out.textContent = c.fmt(v);
+      ctl.setAttribute('aria-valuetext', c.fmt(v));
+    };
+    draw();
+    if (edit) dragValue(ctl, c, () => v, nv => { v = nv; draw(); }, save, () => (c.t === 'knob' ? 220 : ctl.clientHeight - 28));
+    else { ctl.setAttribute('role', 'img'); ctl.setAttribute('aria-label', `${c.label}: ${c.fmt(v)}`); }
+    cell.append(lab, ctl, out);
+    (c.t === 'knob' ? knobs : c.small ? geqs : faders).append(cell);
+  }
+  if (btns.childElementCount) left.append(btns);
+  if (knobs.childElementCount) left.append(knobs);
+  if (geqs.childElementCount) left.append(el('span', 'lbl', 'Graphic EQ'), geqs);
+  body.append(left, faders);
+  const foot = $('knob-foot');
+  foot.replaceChildren();
+  if (edit) {
+    const lab = el('label', null, 'Note');
+    const note = el('input');
+    note.value = vals.note || '';
+    note.placeholder = 'e.g. compressor on, watch for feedback';
+    note.addEventListener('change', () => setKnob(st.key, 'note', note.value.trim()));
+    lab.append(note);
+    const row = el('div', 'row-btns');
+    const reset = el('button', 'btn small', 'Reset this strip');
+    reset.type = 'button';
+    reset.addEventListener('click', () => {
+      patchShow(v => { const kn = { ...(v.mix?.knobs || {}) }; delete kn[st.key]; v.mix = { ...(v.mix || {}), knobs: kn }; });
+      drawKnobs();
+    });
+    row.append(reset);
+    foot.append(lab, row, el('p', 'cap', 'Drag a knob or fader up or down (or use the arrow keys); double-tap to put it back. Saved as you let go. The numbers are rough: match the pointer to the board.'));
+  } else {
+    if (vals.note) foot.append(el('p', 'knob-note', vals.note));
+    foot.append(el('p', 'cap', Object.keys(vals).length ? 'Where everything was set. The numbers are rough: match the pointer to the board.' : 'Nothing set here yet.'));
+  }
+}
+$('knob-copy').addEventListener('change', () => {
+  const s = currentShow(), src = get($('knob-copy').value);
+  $('knob-copy').value = '';
+  if (!s || !src || !confirm(`Copy every knob, button and fader setting from ${src.name} to ${s.name}? This replaces what's set for ${s.name}.`)) return;
+  patchShow(v => { v.mix = { ...(v.mix || {}), knobs: structuredClone(src.mix.knobs), ...(src.mix.fx ? { fx: src.mix.fx } : {}) }; });
+  toast(`Copied the knob settings from ${src.name}.`);
 });
 
 /* Band */
@@ -1394,7 +1670,8 @@ $('sh-delete').addEventListener('click', () => {
 });
 
 document.querySelectorAll('dialog').forEach(d => {
-  d.addEventListener('click', e => { if (e.target === d) d.close(); });
+  // (Not just after dragging a knob or fader: letting go outside the pop-up mustn't close it.)
+  d.addEventListener('click', e => { if (e.target === d && !dragging) d.close(); });
   d.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => d.close()));
 });
 
