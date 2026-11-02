@@ -243,7 +243,15 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .strip, .face .master { grid-row: 1 / -1; display: grid; grid-template-rows: subgrid; border-radius: 4px; cursor: pointer; padding-bottom: 3px; }
 .face .master { grid-column: span 2; grid-template-columns: subgrid; column-gap: 2px; border-left: 1px solid rgba(255, 255, 255, .14); }
 .face.mackie .master { grid-column: span 4; }
-.strip:hover, .face .master:hover { background: rgba(255, 255, 255, .07); }
+.face:not(.edit) .strip:hover, .face:not(.edit) .master:hover { background: rgba(255, 255, 255, .07); }
+/* Editor: drag knobs and faders right on the drawing, tap buttons; the number / tape / master labels open the pop-up */
+.face.edit .strip, .face.edit .master { cursor: default; }
+.face .live { cursor: ns-resize; touch-action: none; }
+.face .bt.live { cursor: pointer; }
+.face .live:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.face .kn.live:hover { box-shadow: 0 0 0 2px var(--accent); }
+.face.edit .opens { cursor: pointer; }
+.face.edit .opens:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
 .face .cell { display: flex; align-items: center; justify-content: center; gap: calc(var(--ks) * .2); min-width: 0; }
 .face .num { font: 700 clamp(10px, calc(var(--u) * .17), 15px)/1 var(--f-body); color: var(--lab); white-space: nowrap; padding: 2px 0; }
 .face.epm .num { flex: 1; text-align: center; background: #E4E4E0; color: #1E1B18; border-radius: 2px; }

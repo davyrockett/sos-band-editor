@@ -97,6 +97,9 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
   Break, FX master / FX to mon / Phones / Tape level knobs, ST RTN mute, ST RTN / FX RTN / MON / MAIN faders. Knob looks (`KL`, `MK`):
   blue = coloured cap on a skirt with a line; Mackie = black with a coloured fin. Fader marks (`FADE`) measured off the photos
   (Mackie U at 74% of travel). Printout: page 1 flow + blue board, page 2 Mackie board, then the settings sheet.
+  **Controls work on the drawing** (David, 2026-11-02): in the editor, drag a knob or fader on the big drawing (relative drag,
+  arrow keys, wheel, double-tap resets; `live()` in `mixerFace` reuses `dragValue`) and tap buttons to toggle; only the channel
+  number, tape label, master labels / EPM 8 badge / FX display open the pop-up. Band app: look-only, tapping a strip opens it.
   Picking an input never swaps: the page warns (red) when an input has no channel or is on two (David's wish, 2026-10-24). The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
   The Gear tab's PA section adds the mixers, their power cables and (Blue → Mackie) the 2 XLR-to-1/4" submix cables (`mixerGear`).
   **Monitors** (2026-10-25, David): NOT per player. A "Monitor" dropdown on the master mixer card (Mackie MON SEND; blue mixer alone: AUX 1 OUT): No monitor /

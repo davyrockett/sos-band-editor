@@ -816,7 +816,9 @@ function setKnob(key, k, v) {
 }
 // A drawing of the whole board, laid out on its real rows so it can be matched by eye: every knob with its pointer,
 // every button (lit when on), every fader with its scale and where it was set, and a tape label of what's plugged
-// into each channel. Tapping a strip (or the master section) opens its settings.
+// into each channel. In the editor the knobs, faders and buttons work right on the drawing (David, 2026-11-02): drag
+// up/down, tap a button; the channel number or tape label (or a master label) opens the pop-up. The band app's
+// drawing is look-only, and tapping a strip opens its pop-up.
 function faceKnob(c, v) {
   const i = el('i', 'kn');
   i.style.cssText = `--c:${c.c};--s:${c.s};--p:${c.p};--pw:${c.w || .11};--a:${-150 + v * 300}deg`;
@@ -837,8 +839,9 @@ function faceFader(c, v) {
 }
 const faceBtn = (cls, on) => el('span', `bt ${cls}${on ? ' on' : ''}`);
 function mixerFace(mx, L, s) {
-  const face = el('div', `face ${mx.look}`);
-  face.setAttribute('aria-hidden', 'true');
+  const edit = canEdit();
+  const face = el('div', `face ${mx.look}${edit ? ' edit' : ''}`);
+  if (!edit) face.setAttribute('aria-hidden', 'true');
   for (const st of knobStrips(L).filter(x => x.mx === mx)) {
     const vals = knobVals(s, st.key), rows = FACE_ROWS[st.type];
     const cells = new Map();
@@ -847,8 +850,39 @@ function mixerFace(mx, L, s) {
       if (!cells.has(key)) cells.set(key, { r, col, rs, cs, nodes: [] });
       cells.get(key).nodes.push(n);
     };
-    const ctrl = c => c.t === 'knob' ? faceKnob(c, ctrlVal(vals, c)) : c.t === 'fader' ? faceFader(c, ctrlVal(vals, c))
-      : faceBtn(c.k === 'mute' ? 'mute' : c.k === 'hiz' || c.k === 'lowcut' ? 'sm' : '', vals[c.k]);
+    const ctrl = c => live(c, c.t === 'knob' ? faceKnob(c, ctrlVal(vals, c)) : c.t === 'fader' ? faceFader(c, ctrlVal(vals, c))
+      : faceBtn(c.k === 'mute' ? 'mute' : c.k === 'hiz' || c.k === 'lowcut' ? 'sm' : '', vals[c.k]));
+    // Editor: the control works where it's drawn, saved as you let go (the page then redraws).
+    const live = (c, n) => {
+      if (!edit) return n;
+      const save = v => { if (v !== ctrlVal(knobVals(currentShow(), st.key), c)) setKnob(st.key, c.k, v === c.def && !c.same ? undefined : v); };
+      n.classList.add('live');
+      if (c.t === 'btn') {
+        n.tabIndex = 0;
+        n.setAttribute('role', 'button');
+        n.setAttribute('aria-label', `${st.name}: ${c.label}`);
+        n.setAttribute('aria-pressed', Boolean(vals[c.k]));
+        n.addEventListener('click', () => save(!vals[c.k]));
+        n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); save(!vals[c.k]); } });
+        return n;
+      }
+      let v = ctrlVal(vals, c);
+      const draw = () => {
+        if (c.t === 'knob') n.style.setProperty('--a', `${-150 + v * 300}deg`);
+        else n.querySelector('i').style.setProperty('--v', v);
+        n.setAttribute('aria-valuetext', c.fmt(v));
+      };
+      draw();
+      dragValue(n, { ...c, label: `${st.name}: ${c.label}` }, () => v, nv => { v = nv; draw(); }, () => save(v),
+        () => (c.t === 'knob' ? 160 : n.clientHeight - n.querySelector('i').offsetHeight));
+      return n;
+    };
+    // The channel number and tape label (master: its labels) open the pop-up.
+    const opener = n => {
+      n.classList.add('opens');
+      if (edit) n.addEventListener('click', () => openKnobs(st.key));
+      return n;
+    };
     let node;
     if (st.main) {
       node = el('div', 'master');
@@ -858,22 +892,22 @@ function mixerFace(mx, L, s) {
         const eq = el('span', 'geq');
         for (const c of st.ctrls.filter(x => x.small)) {
           const b = el('span', 'band');
-          b.append(faceFader(c, ctrlVal(vals, c)), el('small', null, c.label));
+          b.append(ctrl(c), el('small', null, c.label));
           eq.append(b);
         }
         add(2, 1, eq, 4, 3);
         const fx = el('span', 'fxbox');
-        fx.append(el('span', 'led7', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--'), faceKnob({ c: '#272727', s: '#121212', p: 'transparent' }, 0),
+        fx.append(opener(el('span', 'led7', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--')), faceKnob({ c: '#272727', s: '#121212', p: 'transparent' }, 0),
           ctrl(st.ctrls.find(c => c.k === 'fxmute')));
         add(7, 1, fx, 3, 2);
         add(2, 4, led(vals.p48));
         add(4, 4, el('span', 'meter'), 4, 1);
-        ['ST RTN', 'FX RTN', 'MON', 'MAIN'].forEach((t, i) => add(13, i + 1, el('span', 'plabel', t)));
+        ['ST RTN', 'FX RTN', 'MON', 'MAIN'].forEach((t, i) => add(13, i + 1, opener(el('span', 'plabel', t))));
       } else {
         add(2, 1, led(vals.p48));
-        add(4, 1, el('span', 'logo', 'EPM 8'), 2, 2);
+        add(4, 1, opener(el('span', 'logo', 'EPM 8')), 2, 2);
         add(8, 2, el('span', 'meter'), 4, 1);
-        ['MIX L', 'MIX R'].forEach((t, i) => add(13, i + 1, el('span', 'plabel', t)));
+        ['MIX L', 'MIX R'].forEach((t, i) => add(13, i + 1, opener(el('span', 'plabel', t))));
       }
     } else {
       const k = L.at[st.key] || '', inp = L.byKey.get(k);
@@ -881,13 +915,13 @@ function mixerFace(mx, L, s) {
       node = el('div', `strip${tape ? '' : ' empty'}${inp && L.where(k).length > 1 ? ' twice' : ''}`);
       const kc = st.ret ? 'var(--accent)' : inp && `var(--k-${inp.m.kind})`;
       if (kc) node.style.setProperty('--kc', kc);
-      add(1, 1, el('span', 'num', st.label.replace('St ', 'ST')));
+      add(1, 1, opener(el('span', 'num', st.label.replace('St ', 'ST'))));
       if (st.type === 'epmSt') { add(2, 1, el('span', 'jack')); add(3, 1, el('span', 'jack')); }
       else add(2, 1, el('span', st.xlr ? 'jack xlr' : 'jack'));
       if (st.type === 'epm' || st.type === 'epmSt') add(11, 1, faceBtn('pfl'));
       else add(11, 1, el('i', 'led'));   // the Mackie's OL light
       for (const c of st.ctrls) add(c.t === 'fader' ? 12 : rows[c.k], 1, ctrl(c));
-      add(13, 1, el('span', 'tape', tape));
+      add(13, 1, opener(el('span', 'tape', tape)));
     }
     for (const { r, col, rs, cs, nodes } of cells.values()) {
       const cell = el('span', 'cell');
@@ -896,7 +930,7 @@ function mixerFace(mx, L, s) {
       cell.append(...nodes);
       node.append(cell);
     }
-    node.addEventListener('click', () => openKnobs(st.key));
+    if (!edit) node.addEventListener('click', () => openKnobs(st.key));
     face.append(node);
   }
   return face;
