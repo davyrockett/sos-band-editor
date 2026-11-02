@@ -246,8 +246,9 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .strip .jack { width: clamp(14px, calc(var(--u) * .3), 26px); aspect-ratio: 1; border-radius: 50%; background: #0E0E0E; border: 2px solid #A2A8B0; }
 .strip.stereo .jack { width: clamp(10px, calc(var(--u) * .2), 18px); border-color: #D4D8DE; }
 .face .knobs { display: grid; gap: calc(var(--ks) * .28); justify-items: center; }
-.face .kn { position: relative; width: var(--ks); height: var(--ks); border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px rgba(0, 0, 0, .4); }
-.face .kn::after { content: ''; position: absolute; left: 50%; top: 6%; width: max(2px, calc(var(--ks) * .11)); height: 44%; margin-left: calc(max(2px, calc(var(--ks) * .11)) / -2);
+/* A knob with its pointer (the drawings and the printout); --ks = its size */
+.kn { position: relative; flex: none; width: var(--ks, 12px); height: var(--ks, 12px); border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px rgba(0, 0, 0, .4); }
+.kn::after { content: ''; position: absolute; left: 50%; top: 6%; width: max(2px, calc(var(--ks, 12px) * .11)); height: 44%; margin-left: calc(max(2px, calc(var(--ks, 12px) * .11)) / -2);
   background: var(--p); border-radius: 1px; transform-origin: 50% 100%; transform: rotate(var(--a)); }
 .strip .mute { width: calc(var(--ks) * 1.1); height: calc(var(--ks) * .6); border-radius: 2px; background: #B4372E; }
 .face.mackie .strip .mute { background: #8E8E8E; }
@@ -286,6 +287,62 @@ body.editing .pcard { cursor: grab; touch-action: none; }
   .mixer ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); column-gap: 24px; }
 }
 @media print { .knob-btn { display: none; } .ksum { padding-left: 0; } }
+
+/* Signal flow: inputs → mixers → PA and monitors */
+.flow { max-width: 900px; margin: 0 0 16px; }
+.flow svg { display: block; width: 100%; height: auto; }
+.flow rect { fill: var(--surface); stroke: var(--line); stroke-width: 2; }
+.flow .epm rect { fill: #23325C; stroke: #4A68B0; }
+.flow .mackie rect { fill: #1A1B1B; stroke: #39B54A; }
+.flow .out rect { fill: var(--accent-soft); stroke: var(--accent); }
+.flow text { font-family: var(--f-body); text-anchor: middle; fill: var(--ink); }
+.flow .big { font-weight: 700; font-size: 17px; }
+.flow .sm { font-size: 13px; fill: var(--muted); }
+.flow .epm text, .flow .mackie text { fill: #fff; }
+.flow .epm .sm, .flow .mackie .sm { fill: #CDD3DE; }
+.flow .lab { font-size: 12px; fill: var(--muted); }
+.flow .ar { stroke: var(--ink); stroke-width: 2.5; fill: none; marker-end: url(#flow-ar); }
+.flow .cap { margin: 4px 0 0; }
+
+/* The printout (Mixer page → Print): page 1 the flow and both boards as set, page 2 the settings sheet */
+.mfd { position: relative; display: block; width: 4px; height: 34px; background: #222; border-radius: 2px; }
+.mfd i { position: absolute; left: 50%; bottom: calc((100% - 6px) * var(--v, 0)); width: 14px; height: 6px; margin-left: -7px; background: #ddd; border: 1px solid #333; border-radius: 1px; }
+@media print {
+  #mixers { display: none !important; }
+  .flow { max-width: 7.2in; margin: 0 auto 12px; break-inside: avoid; }
+  .flow .cap { font-size: 10pt; }
+  .mp-faces { display: flex; gap: 12px; align-items: flex-start; break-inside: avoid; }
+  .mp-face { flex: 12 1 0; min-width: 0; }
+  .mp-face.mackie { flex: 7.4 1 0; }
+  .mp-face h4 { font: 700 10pt var(--f-body); margin: 0 0 4px; }
+  .mp-face .face { max-width: none; margin: 0; }
+  .mp-sheet { break-before: page; }
+  .mp-sheet .print-title { margin-bottom: 4px; }
+  .mp-sheet h4 { font: 800 13pt var(--f-display); text-transform: uppercase; margin: 12px 0 4px; }
+  .mp-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  .mp-table tr { break-inside: avoid; }
+  .mp-table th, .mp-table td { border: 1px solid #999; padding: 2px 4px; height: 27px; text-align: center; white-space: nowrap; }
+  .mp-table th { background: #000; color: #fff; font-size: 8pt; }
+  .mp-table td.c { font-weight: 700; }
+  .mp-table td.in { text-align: left; white-space: normal; box-shadow: inset 4px 0 0 var(--kc, transparent); padding-left: 8px; }
+  .mp-table td.nt { text-align: left; white-space: normal; width: 1.3in; }
+  .mp-table .kn { --ks: 10px; display: inline-block; vertical-align: -1px; margin-right: 3px; }
+  .mp-table .na { color: #aaa; }
+  .mp-master { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 14px; border: 1px solid #999; border-top: 0; padding: 6px 8px; font-size: 8.5pt; break-inside: avoid; }
+  .mp-mh { align-self: center; font-size: 10pt; }
+  .mp-cell { display: grid; justify-items: center; gap: 3px; min-width: .55in; }
+  .mp-cell .kn { --ks: 16px; }
+  .mp-cell.small { min-width: .36in; }
+  .mp-cell.small .mfd { height: 26px; }
+  .mp-l { font-weight: 700; }
+  .mp-v { min-height: 1.1em; }
+  .mp-blank { width: .45in; height: .3in; border-bottom: 1px solid #999; }
+  .mp-geq { display: grid; gap: 2px; justify-items: start; }
+  .mp-geq-row { display: flex; gap: 4px; }
+  .mp-info { flex: 1 1 100%; }
+  .mp-info p { margin: 1px 0; }
+  #mix-print *, .flow * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 
 /* The settings pop-up */
 dialog.sheet.knob-sheet { width: min(1040px, calc(100vw - 24px)); }

@@ -86,6 +86,10 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
   Drag up/down, arrow keys or wheel; double-tap resets; saved on release. `show.mix.knobs` = { strip: { control: 0–1 / true, note } },
   strip = slot or `Amain`/`Bmain`/`Bret`/`main`. The drawings show every knob's pointer, fader and lit mute; rows show a summary.
   Readouts follow the printed scales only roughly (Mackie gain = clock position). "Copy knob settings from…" copies another gig's.
+  **Signal flow + printout** (David, 2026-11-02): `mixFlow()` draws inputs → blue → Mackie → PA/monitor (SVG, on the page and printed).
+  Print (`mixPrint()`, print-only `#mix-print`; the interactive cards are hidden): page 1 = title, flow, both boards side by side as set;
+  page 2 = settings sheet, one table per mixer (a column per knob/fader; strips with nothing set print blank to write in at rehearsal)
+  plus each master section as little knobs/faders (graphic EQ too), Out / Monitor / Effect, then warnings and notes.
   Picking an input never swaps: the page warns (red) when an input has no channel or is on two (David's wish, 2026-10-24). The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
   The Gear tab's PA section adds the mixers, their power cables and (Blue → Mackie) the 2 XLR-to-1/4" submix cables (`mixerGear`).
   **Monitors** (2026-10-25, David): NOT per player. A "Monitor" dropdown on the master mixer card (Mackie MON SEND; blue mixer alone: AUX 1 OUT): No monitor /

@@ -195,10 +195,12 @@ applyTheme(savedTheme());
       </div>
       <button type="button" class="btn small" id="mix-redo">Renumber from the stage plot</button>
       <select id="knob-copy" class="btn small" aria-label="Copy knob and fader settings from another gig" hidden></select>
-      <p class="cap">Blue → Mackie: vocals on the blue Soundcraft, submixed into Mackie 7/8 so the Mackie's effects reach them; instruments on the Mackie. Pick what goes on each channel (tap a strip in the picture to jump to it). New players go on the first spare channel. A warning shows if someone has no channel or is on two.</p>
+      <p class="cap">Blue → Mackie: vocals on the blue Soundcraft, submixed into Mackie 7/8 so the Mackie's effects reach them; instruments on the Mackie. Pick what goes on each channel (tap a strip in the picture for its knobs and faders). Print gives the signal flow and both boards, then a settings sheet to fill in.. New players go on the first spare channel. A warning shows if someone has no channel or is on two.</p>
     </div>
     <h3 class="print-only print-title" id="mixer-print-title"></h3>
+    <div id="mix-flow"></div>
     <div id="mixers" class="mixers"></div>
+    <div id="mix-print" class="print-only"></div>
     <div id="mix-msgs"></div>
     <div id="mixer-notes"></div>
   </section>
@@ -464,7 +466,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v49';
+window.APP_VERSION = 'v50';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

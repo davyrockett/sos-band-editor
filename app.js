@@ -847,15 +847,147 @@ function mixerFace(mx, L, s) {
   }
   return face;
 }
+/* Signal flow: what plugs into which mixer and where each one goes (on the page and on the printout). */
+function mixFlow(L, s) {
+  const count = id => {
+    const n = { mic: 0, di: 0, other: 0 };
+    for (const c of L.slots) if (L.info[c].mx.id === id && L.at[c]) n[L.byKey.get(L.at[c])?.type || 'other']++;
+    const p = (k, w) => n[k] && `${n[k]} ${w}${n[k] > 1 ? 's' : ''}`;
+    return [p('mic', 'mic'), p('di', 'DI'), n.other && `${n.other} other`].filter(Boolean).join(' + ') || 'Nothing yet';
+  };
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const box = (x, y, w, h, lines, cls) => `<g class="${cls}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/>`
+    + lines.map((t, i) => `<text x="${x + w / 2}" y="${y + h / 2 + (i - (lines.length - 1) / 2) * 20 + 6}" class="${i ? 'sm' : 'big'}">${esc(t)}</text>`).join('') + '</g>';
+  const arrow = (x1, y1, x2, y2, label) => `<path d="M${x1} ${y1}H${x2}" class="ar"/>` + (label ? `<text x="${(x1 + x2) / 2}" y="${y1 - 8}" class="lab">${esc(label)}</text>` : '');
+  const mons = monitorCount(s), monTxt = `${mons} stage monitor${mons > 1 ? 's' : ''}`;
+  const fx = s.mix?.fx ? `FX: ${fxName(s.mix.fx)}` : 'FX: not picked';
+  let g;
+  if (L.setup === 'two') {
+    g = box(10, 20, 170, 56, [count('A'), 'into the blue mixer'], 'src') + box(10, 124, 170, 56, [count('B'), 'into the Mackie'], 'src')
+      + box(240, 12, 190, 72, ['BLUE MIXER', 'Soundcraft EPM8'], 'epm')
+      + box(500, 12, 200, 176, ['MACKIE', 'ProFX8v2', '7/8 ← blue mix', fx], 'mackie')
+      + box(770, 12, 120, 72, ['PA', 'Main out L/R'], 'out')
+      + (mons ? box(770, 116, 120, 72, [monTxt.replace(' stage', ''), 'from MON SEND'], 'out') + arrow(700, 152, 770, 152) : '')
+      + arrow(180, 48, 240, 48) + arrow(180, 152, 500, 152) + arrow(430, 48, 500, 48, 'XLR L/R') + arrow(700, 48, 770, 48);
+  } else {
+    g = box(10, 64, 200, 72, [count(''), 'into the blue mixer'], 'src')
+      + box(300, 30, 220, 140, ['BLUE MIXER', 'Soundcraft EPM8'], 'epm')
+      + box(640, 20, 170, 72, ['PA', 'Mix out L/R'], 'out')
+      + (mons ? box(640, 108, 170, 72, [monTxt.replace(' stage', ''), 'from AUX 1 OUT'], 'out') + arrow(520, 144, 640, 144) : '')
+      + arrow(210, 100, 300, 100) + arrow(520, 56, 640, 56);
+  }
+  const wrap = el('div', 'flow');
+  wrap.innerHTML = `<svg viewBox="0 0 ${L.setup === 'two' ? 900 : 820} 200" role="img" aria-label="Signal flow">`
+    + `<defs><marker id="flow-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--ink)"/></marker></defs>${g}</svg>`;
+  const p = el('p', 'cap');
+  p.append(el('b', null, 'Main out: '), L.out);
+  wrap.append(p);
+  return wrap;
+}
+
+/* The printout: page 1 = signal flow + both boards drawn as set; page 2 = a settings sheet, one row per channel
+   (blank boxes on strips with nothing set, to write in at rehearsal) and each master section. */
+function miniKnob(c, v) {
+  const i = el('i', 'kn');
+  i.style.cssText = `--c:${c.c};--p:${c.p};--a:${-150 + v * 300}deg`;
+  return i;
+}
+function miniFader(v) {
+  const f = el('span', 'mfd'), i = el('i');
+  i.style.setProperty('--v', v);
+  f.append(i);
+  return f;
+}
+function mixPrint(L, s) {
+  const box = el('div');
+  const strips = knobStrips(L);
+  const faces = el('div', 'mp-faces');
+  for (const mx of MIX[L.setup]) {
+    const f = el('div', `mp-face ${mx.look}`);
+    f.append(el('h4', null, `${mx.name} · ${mx.model}`), mixerFace(mx, L, s));
+    faces.append(f);
+  }
+  const sheet = el('div', 'mp-sheet');
+  sheet.append(el('h3', 'print-title', `Settings · ${s.name} · ${fmtDate(s.date, false)}`));
+  for (const mx of MIX[L.setup]) {
+    sheet.append(el('h4', null, `${mx.name} · ${mx.model}`));
+    const rows = strips.filter(x => x.mx === mx && !x.main);
+    const cols = [];
+    for (const st of rows) for (const c of st.ctrls) if (c.t !== 'btn' && !cols.some(x => x.k === c.k)) cols.push(c);
+    const t = el('table', 'mp-table');
+    const head = el('tr');
+    head.append(el('th', 'c', 'Ch'), el('th', 'in', 'Input'), ...cols.map(c => el('th', null, c.label)), el('th', 'nt', 'Buttons / notes'));
+    t.append(head);
+    for (const st of rows) {
+      const vals = knobVals(s, st.key), set = Object.keys(vals).length > 0;
+      const k = L.at[st.key] || '', inp = L.byKey.get(k);
+      const tr = el('tr', set ? '' : 'blank');
+      const who = el('td', 'in');
+      if (inp) { who.style.setProperty('--kc', `var(--k-${inp.m.kind})`); who.append(el('b', null, inp.m.name), ` ${inp.what}`); }
+      else who.append(st.ret ? 'Blue mix (submix)' : k.slice(5) || el('span', 'spare', st.xlr ? 'spare' : 'spare (line only)'));
+      tr.append(el('td', 'c', st.label), who);
+      for (const c of cols) {
+        const td = el('td');
+        const own = st.ctrls.find(x => x.k === c.k);
+        if (!own) td.append(el('span', 'na', '–'));
+        else if (set) {
+          const v = ctrlVal(vals, own);
+          if (own.t === 'knob') td.append(miniKnob(own, v));
+          td.append(own.fmt(v));
+        }
+        tr.append(td);
+      }
+      tr.append(el('td', 'nt', [...st.ctrls.filter(c => c.t === 'btn' && vals[c.k]).map(c => c.label), vals.note].filter(Boolean).join(' · ')));
+      t.append(tr);
+    }
+    sheet.append(t);
+    // The master section: its knobs and faders as little pictures, buttons that are on, and where it goes.
+    const st = strips.find(x => x.key === mx.id + 'main'), vals = knobVals(s, st.key), set = Object.keys(vals).length > 0;
+    const m = el('div', 'mp-master');
+    m.append(el('b', 'mp-mh', 'Master'));
+    const cell = (c, parent) => {
+      const d = el('span', 'mp-cell' + (c.small ? ' small' : ''));
+      const v = ctrlVal(vals, c);
+      d.append(el('span', 'mp-l', c.label), set ? (c.t === 'knob' ? miniKnob(c, v) : miniFader(v)) : el('span', 'mp-blank'), el('span', 'mp-v', set ? c.fmt(v) : ''));
+      parent.append(d);
+    };
+    for (const c of st.ctrls) if (c.t !== 'btn' && !c.small) cell(c, m);
+    if (st.ctrls.some(c => c.small)) {
+      const g = el('span', 'mp-geq');
+      g.append(el('span', 'mp-l', `Graphic EQ${vals.eqin ? '' : ' (bypassed)'}${vals.eqmon ? ' on Mon' : ' on Main'}`));
+      const row = el('span', 'mp-geq-row');
+      for (const c of st.ctrls) if (c.small) cell(c, row);
+      g.append(row);
+      m.append(g);
+    }
+    const on = st.ctrls.filter(c => c.t === 'btn' && vals[c.k] && !/^eq/.test(c.k)).map(c => c.label);
+    const info = el('div', 'mp-info');
+    const line = (b, text) => { const p = el('p'); p.append(el('b', null, b + ': '), text); info.append(p); };
+    if (on.length) line('On', on.join(', '));
+    if (vals.note) line('Note', vals.note);
+    const master = !(L.setup === 'two' && mx.id === 'A');
+    line('Out', master ? L.out : 'Mix out L/R (XLR) → Mackie 7/8');
+    if (master) line('Monitor', monitorCount(s) ? `${monitorCount(s) > 1 ? '2 stage monitors' : '1 stage monitor'} from ${mx.aux}` : 'none');
+    if (mx.look === 'mackie') line('Effect', s.mix?.fx ? fxName(s.mix.fx) : '');
+    m.append(info);
+    sheet.append(m);
+  }
+  box.append(faces, sheet);
+  return box;
+}
 function renderMixers(s) {
   const box = $('mixers');
   box.replaceChildren();
   $('mixer-print-title').textContent = s ? `SOS Band — Mixer routing · ${s.name} · ${fmtDate(s.date, false)}` : '';
   $('mixer-notes').replaceChildren();
   $('mix-msgs').replaceChildren();
+  $('mix-flow').replaceChildren();
+  $('mix-print').replaceChildren();
   if (!s) return;
   const edit = canEdit();
   const L = mixLayout(s), chName = L.chName;
+  $('mix-flow').append(mixFlow(L, s));
+  $('mix-print').append(mixPrint(L, s));
   document.querySelectorAll('#mix-setup button').forEach(b => b.setAttribute('aria-pressed', b.dataset.setup === L.setup));
   $('mix-redo').disabled = !L.pinned;
   const label = inp => `${inp.m.name} — ${inp.what}`;
