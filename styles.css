@@ -228,10 +228,53 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .add-row { margin: 0 0 18px; }
 
 /* Mixers */
-.mixers { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 14px; }
-.mixer { background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); padding: 14px; }
-.mixer:nth-child(odd) { border-color: var(--k-acoustic); }
-.mixer:nth-child(even) { border-color: var(--k-vocal); }
+.mixers { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; }
+.mixer { background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); padding: 14px; min-width: 0; }
+.mixer.epm { flex: 12 1 330px; border-color: #4A68B0; }
+.mixer.mackie { flex: 8 1 280px; border-color: #39A84A; }
+/* The drawing of each mixer's top panel (its real colours, so the same in light and dark) */
+.face { display: flex; gap: 2px; padding: 8px 6px 6px; border-radius: 8px; margin: 0 0 12px; }
+.face.epm { background: #23325C; --lab: #DCE1EC; --cap: #F2F2EE; }
+.face.mackie { background: #1A1B1B; --lab: #ECECEC; --cap: #2C2C2C; }
+.strip { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 0 3px; border-radius: 4px; cursor: pointer; }
+.strip:hover { background: rgba(255, 255, 255, .08); }
+.strip.ret { cursor: default; }
+.strip .num { font: 700 11px/1 var(--f-body); color: var(--lab); white-space: nowrap; padding: 2px 0; }
+.face.epm .strip .num { align-self: stretch; text-align: center; background: #E4E4E0; color: #1E1B18; border-radius: 2px; }
+.strip .jack { width: 14px; height: 14px; border-radius: 50%; background: #0E0E0E; border: 2px solid #A2A8B0; }
+.strip.stereo .jack { width: 10px; height: 10px; margin: 2px 0; border-color: #D4D8DE; }
+.strip .knobs { display: grid; gap: 3px; justify-items: center; }
+.strip .knobs i { width: 11px; height: 11px; border-radius: 50%; background: #3A3A3A; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); }
+.face.epm .knobs .gain { background: #E2392F; } .face.epm .knobs .eq { background: #3A3A3A; box-shadow: 0 0 0 2px #9A9A9A; }
+.face.epm .knobs .mf { background: #F4F4F4; } .face.epm .knobs .aux1 { background: #59D3AE; }
+.face.epm .knobs .aux2 { background: #7FA8E8; } .face.epm .knobs .pan { background: #F3D417; }
+.face.mackie .knobs .gain { background: #F1F1F1; } .face.mackie .knobs .eq { background: #1E88E5; }
+.face.mackie .knobs .mon { background: #7ED321; } .face.mackie .knobs .fx { background: #F5B800; } .face.mackie .knobs .pan { background: #BDBDBD; }
+.strip .mute { width: 12px; height: 7px; border-radius: 2px; background: #D8352A; }
+.face.mackie .strip .mute { background: #A5A5A5; }
+.face .fader { position: relative; flex: none; width: 4px; height: 64px; margin-top: auto; background: #070707; border-radius: 2px; }
+.face .fader i { position: absolute; left: 50%; bottom: 30%; width: 14px; height: 10px; transform: translateX(-50%);
+  background: var(--cap); border-radius: 2px; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .3), 0 0 0 1px rgba(255, 255, 255, .15); }
+.strip.empty .fader i { bottom: 2%; }
+.face.epm .strip.stereo .fader i { background: #3D5E93; }
+.face.epm .mains .fader i { background: #F3D417; }
+/* Masking tape under the faders, written on in marker */
+.face .tape { flex: none; writing-mode: vertical-rl; transform: rotate(180deg); height: 72px; width: 100%; max-width: 20px;
+  background: #F1E7C8; color: #1E1B18; font: 700 11px/1 var(--f-body); padding: 4px 0; border-radius: 1px; text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: inset 0 -4px 0 var(--kc, #F1E7C8); }
+.strip.empty .tape { background: transparent; box-shadow: none; }
+.strip.twice .tape { background: #F6C9C5; }
+.face .master { flex: 1.6 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 0 3px 6px;
+  border-left: 1px solid rgba(255, 255, 255, .14); }
+.face .meter { display: flex; gap: 3px; margin-top: 14px; }
+.face .meter i { width: 5px; height: 80px; border-radius: 2px; background: linear-gradient(#E53935 0 12%, #FFA000 12% 30%, #43A047 30%); opacity: .85; }
+.face .fxbox { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 4px; padding: 5px; border: 2px solid #39B54A; border-radius: 4px; }
+.face .led { font: 700 16px/1 ui-monospace, Menlo, monospace; color: #6BFF6B; background: #071407; padding: 3px 4px; border-radius: 2px; letter-spacing: 1px; }
+.face .fxbox i { width: 16px; height: 16px; border-radius: 50%; background: #111; box-shadow: 0 0 0 2px #4A4A4A; }
+.face .mains { display: flex; gap: 10px; margin-top: auto; }
+.face .mains .fader { margin-top: 0; }
+.mixer li.flash { animation: chflash 1.4s ease-out; }
+@keyframes chflash { from { background: var(--accent-soft); } }
 .mixer h3 { font-size: 24px; text-transform: uppercase; }
 .mixer .role { color: var(--muted); margin: 2px 0 10px; }
 .mixer ol { list-style: none; margin: 0; padding: 0; }
@@ -244,6 +287,7 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .mixer-edit { display: grid; gap: 8px; margin-bottom: 10px; }
 .mixer-edit select { min-height: 40px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--bg); width: 100%; }
 .mixer-edit input { min-height: 40px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--bg); width: 100%; }
+.mixer li .ch { min-width: 42px; }
 .mixer li .pick { flex: 1; min-width: 0; display: grid; gap: 6px; }
 .mixer li select { width: 100%; min-height: 36px; border: 1px solid var(--line); border-left: 5px solid var(--kc, var(--line)); border-radius: 6px; padding: 4px 8px; background: var(--bg); }
 .mixer li .what { color: var(--muted); font-size: 15px; }
@@ -386,7 +430,7 @@ body.viewing { overflow: hidden; }
   .plot { min-width: 0; break-inside: avoid; width: 8.4in; max-width: 100%; margin: 0 auto; }
   .band-foot { display: none; }
   .gear-table th { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .pcard, .legend i, .chip, .ch, .mixer li select { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pcard, .legend i, .chip, .ch, .mixer li select, .face, .face * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body.print-list main { display: none; }
   body:not(.print-list) #print-setlist { display: none; }
   body:not(.print-pdf) #print-pdf { display: none; }

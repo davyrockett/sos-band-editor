@@ -69,14 +69,20 @@ built from this same code.
 
 Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs into one), Stage plot
 (drag people; tap one to edit them), Gear (totals from each player's gear + extras), Mixer, Band (roster, who's playing).
-- **Mixer** (since 2026-10-24) is built from who's on the stage plot: every Mic and DI Box in a player's gear needs a channel
-  (amps and drum kits are listed as "not through the mixer"). Default: one 10-channel mixer; option: two 8-channel mixers,
-  A = instruments, its main out in stereo into B ch 7–8, B = vocals + master. Data: `show.mix` (`setup`, `ch` = channel → input,
-  `known` = inputs there when channels were last set, `out`); unsaved channels fill in stage order, left to right, vocals first;
+- **Mixer** (since 2026-10-24) is built from who's on the stage plot: every Mic and DI Box in a player's gear needs an XLR channel
+  (amps and drum kits are listed as "not through the mixer"). **The band's two real mixers** (David's photos, 2026-11-02):
+  the blue **Soundcraft EPM8** (ch 1–8 mic/line on XLR + 1/4", Stereo 1–2 line only, XLR mix out, no effects) and the black
+  **Mackie ProFX8v2** (mic channels 1, 2, 3/4, 5/6; 7/8 stereo line only; ReadyFX, 16 presets). Setups: **Blue → Mackie**
+  (default, David's plan): vocals on the blue mixer, its mix out L/R into Mackie 7/8 (2 XLR-to-1/4" cables) so the Mackie's
+  effects reach the whole blue mix; instruments (DIs) on the Mackie, which feeds the PA. Or **Blue mixer only**.
+  Slots: A1–A10 = blue 1–8, St 1, St 2 (one mixer: 1–10); B1–B4 = Mackie 1, 2, 3/4, 5/6. Mics/DIs never go on line-only
+  channels. Each card draws the mixer's top panel in its real colours (`mixerFace`) with a masking-tape label per strip;
+  tapping a strip jumps to its row. `show.mix.fx` = the Mackie FX preset (1–16), shown on its LED. Data: `show.mix` (`setup`, `ch` = channel → input,
+  `known` = inputs there when channels were last set, `out`, `monitors`, `fx`); unsaved channels fill in stage order, left to right, vocals first;
   any change saves the whole layout so channels stay put, and only new inputs go on a spare channel by themselves.
   Picking an input never swaps: the page warns (red) when an input has no channel or is on two (David's wish, 2026-10-24). The stage plot cards show each player's channels. The old `show.mixers` list is no longer used.
-  The Gear tab's PA section adds the mixers, their power cables and (two mixers) the A → B stereo cables from the setup (`mixerGear`).
-  **Monitors** (2026-10-25, David): NOT per player. A "Monitor" dropdown on the main (vocals) mixer card: No monitor /
+  The Gear tab's PA section adds the mixers, their power cables and (Blue → Mackie) the 2 XLR-to-1/4" submix cables (`mixerGear`).
+  **Monitors** (2026-10-25, David): NOT per player. A "Monitor" dropdown on the master mixer card (Mackie MON SEND; blue mixer alone: AUX 1 OUT): No monitor /
   1 monitor / 2 monitors (`show.mix.monitors`, `monitorCount`). Each monitor adds Stage Monitor, Power Cable and 1/4" Cable
   to the Gear tab's PA section (David's list). The band app shows "Monitor: 1/2 stage monitor(s)" under Out.
 Gigs ("shows" in the code/data): the picker in the header lists them, upcoming first. Band members can switch

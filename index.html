@@ -190,11 +190,11 @@ applyTheme(savedTheme());
     </div>
     <div class="edit-only mix-bar">
       <div class="seg" id="mix-setup" role="group" aria-label="Mixer setup">
-        <button type="button" data-setup="one">One 10-channel</button>
-        <button type="button" data-setup="two">Two 8-channel</button>
+        <button type="button" data-setup="two">Blue → Mackie</button>
+        <button type="button" data-setup="one">Blue mixer only</button>
       </div>
       <button type="button" class="btn small" id="mix-redo">Renumber from the stage plot</button>
-      <p class="cap">Pick what goes on each channel. New players go on the first spare channel. A warning shows if someone has no channel or is on two.</p>
+      <p class="cap">Blue → Mackie: vocals on the blue Soundcraft, submixed into Mackie 7/8 so the Mackie's effects reach them; instruments on the Mackie. Pick what goes on each channel (tap a strip in the picture to jump to it). New players go on the first spare channel. A warning shows if someone has no channel or is on two.</p>
     </div>
     <h3 class="print-only print-title" id="mixer-print-title"></h3>
     <div id="mixers" class="mixers"></div>
@@ -447,7 +447,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v47';
+window.APP_VERSION = 'v48';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

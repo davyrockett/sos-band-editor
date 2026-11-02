@@ -498,12 +498,13 @@ function mixerGear(s) {
   return [...mixerBoxes(s), ...mon];
 }
 function mixerBoxes(s) {
-  return s.mix?.setup === 'two' ? [
-    { item: 'Mackie Mixer (8-ch)', how: 'A: instruments, B: vocals + master', qty: 2 },
+  return mixSetup(s) === 'two' ? [
+    { item: 'Soundcraft EPM8 Mixer (blue)', how: 'Submix → Mackie ch 7/8', qty: 1 },
+    { item: 'Mackie ProFX8v2 Mixer (black)', how: 'Master + effects → PA', qty: 1 },
     { item: 'Power Cables (Mixers)', how: '1 per mixer', qty: 2 },
-    { item: 'Cables (Mixer A → Mixer B ch 7–8)', how: 'Stereo submix, L + R', qty: 2 },
+    { item: 'XLR to 1/4" Cables', how: 'Blue mix out L + R → Mackie 7/8', qty: 2 },
   ] : [
-    { item: 'Mixer (10-ch)', how: '', qty: 1 },
+    { item: 'Soundcraft EPM8 Mixer (blue)', how: '', qty: 1 },
     { item: 'Power Cable (Mixer)', how: '', qty: 1 },
   ];
 }
@@ -597,18 +598,30 @@ function notesBox(s, key, label) {
 }
 
 /* Mixers
-   The channels come from who's on the stage plot: each Mic and DI Box in a player's gear needs one.
-   Default: one 10-channel mixer. Or two 8-channel mixers: A takes the instruments, and its main out
-   goes in stereo into channels 7–8 of B, which takes the vocals and feeds the PA.
-   show.mix = { setup: 'one' | 'two', ch: { '1': key, 'A1': key, 'B3': key… }, known: [keys], out }
+   The band's two mixers (David's photos, 2026-11-02):
+   - Soundcraft EPM8 (blue): channels 1–8 take a mic or DI (XLR) or a line; Stereo 1 and 2 take lines only (1/4" L/R).
+     Mix out L/R on XLR. No effects.
+   - Mackie ProFX8v2 (black): mic channels 1, 2, 3/4 and 5/6 (3/4 and 5/6 take a mic or a stereo line),
+     7/8 is stereo line only; ReadyFX effects (16 presets) with an FX knob on every channel.
+   The channels come from who's on the stage plot: each Mic and DI Box in a player's gear needs an XLR channel.
+   Setups: 'two' (default, David's plan): the blue mixer takes the vocals and submixes into Mackie 7/8, so the
+   Mackie's effects reach the whole blue mix; the Mackie takes the instruments and feeds the PA. 'one': blue mixer only.
+   show.mix = { setup, ch: { '1': key, 'A1': key, 'B3': key… }, known: [keys], out, monitors, fx }
+   Slots are the mixer's letter + strip number: A1–A10 = blue 1–8, St 1, St 2; B1–B4 = Mackie 1, 2, 3/4, 5/6.
    key = 'memberId|mic|0', 'memberId|di|0', or 'text:…' (anything else typed in). Until a channel is set,
    inputs fill the channels in stage order (left to right), vocals first. After that, only new inputs
    (not in `known`) go on the first spare channel; the page warns when an input has no channel or two. */
+const EPM8 = { short: 'Blue', model: 'Soundcraft EPM8', look: 'epm', strips: ['1', '2', '3', '4', '5', '6', '7', '8', 'St 1', 'St 2'], xlr: 8 };
+const MACKIE = { short: 'Mackie', model: 'Mackie ProFX8v2', look: 'mackie', strips: ['1', '2', '3/4', '5/6'], xlr: 4 };
 const MIX = {
-  one: [{ id: '', name: 'Mixer', role: '10 channels, out to the PA', n: 10 }],
-  two: [{ id: 'A', name: 'Mixer A', role: 'Instrument submix, 8 channels', n: 8 },
-    { id: 'B', name: 'Mixer B', role: 'Vocals + master, 8 channels', n: 6, ret: true }],
+  one: [{ ...EPM8, id: '', name: 'Blue mixer', role: 'Soundcraft EPM8 · everything, out to the PA', aux: 'AUX 1 OUT' }],
+  two: [{ ...EPM8, id: 'A', name: 'Blue mixer', role: 'Soundcraft EPM8 · vocals submix into the Mackie' },
+    { ...MACKIE, id: 'B', name: 'Mackie', role: 'Mackie ProFX8v2 · instruments, effects + master', ret: '7/8', aux: 'MON SEND' }],
 };
+const FX_PRESETS = ['Bright Room', 'Warm Lounge', 'Small Stage', 'Warm Theater', 'Warm Hall', 'Concert Hall', 'Plate Reverb',
+  'Cathedral', 'Chorus', 'Chorus + Rev', 'Doubler', 'Echo', 'Delay 1 (Fast)', 'Delay 2 (Med)', 'Delay 3 (Slow)', 'Pan Delay'];
+const fxName = n => n ? `${String(n).padStart(2, '0')} ${FX_PRESETS[n - 1]}` : '';
+const mixSetup = s => (s.mix?.setup === 'one' ? 'one' : 'two');
 function mixInputs(s) {
   const on = (s.lineup || []).map(l => ({ ...l, m: get(l.member) })).filter(l => l.m).sort((a, b) => a.x - b.x);
   const out = [];
@@ -617,15 +630,17 @@ function mixInputs(s) {
     const inst = (m.instrument || kindOf(m.kind).label).split('/')[0].trim();
     for (let i = 0; i < n; i++) {
       const what = type === 'mic' ? 'Vox' + (n > 1 ? ` ${i + 1}` : '') : `${inst} (DI${n > 1 ? ` ${i + 1}` : ''})`;
-      out.push({ key: `${m.id}|${type}|${i}`, m, type, what });
+      out.push({ key: `${m.id}|${type}|${i}`, m, type, what, tape: `${m.name} ${type === 'mic' ? 'vox' : 'DI'}` });
     }
   }
   return out;
 }
 function mixLayout(s) {
   const mix = s.mix || {};
-  const setup = mix.setup === 'two' ? 'two' : 'one';
-  const slots = MIX[setup].flatMap(x => Array.from({ length: x.n }, (_, i) => x.id + (i + 1)));
+  const setup = mixSetup(s);
+  const info = {};
+  for (const mx of MIX[setup]) mx.strips.forEach((label, i) => { info[mx.id + (i + 1)] = { mx, label, xlr: i < mx.xlr }; });
+  const slots = Object.keys(info);
   const inputs = mixInputs(s);
   const byKey = new Map(inputs.map(i => [i.key, i]));
   const saved = mix.ch || {};
@@ -635,22 +650,26 @@ function mixLayout(s) {
   const at = {};
   for (const c of slots) {
     const k = saved[c];
-    if (k?.startsWith('text:') || byKey.has(k)) at[c] = k;
+    // Mics and DIs need an XLR socket: one saved on a line-only channel counts as having no channel.
+    if (k?.startsWith('text:') || (byKey.has(k) && info[c].xlr)) at[c] = k;
   }
-  // On two mixers, instruments go on A and vocals on B, spilling onto the other one when it's full.
-  const onA = slots.filter(c => c[0] === 'A'), onB = slots.filter(c => c[0] === 'B');
+  // On two mixers, vocals go on the blue one (A) and instruments on the Mackie (B), spilling onto the other when full.
+  const xlr = slots.filter(c => info[c].xlr);
+  const onA = xlr.filter(c => c[0] === 'A'), onB = xlr.filter(c => c[0] === 'B');
   for (const inp of inputs) {
     if (slots.some(c => at[c] === inp.key) || (pinned && known.has(inp.key))) continue;
-    const order = setup === 'one' ? slots : inp.type === 'mic' ? [...onB, ...onA] : [...onA, ...onB];
+    const order = setup === 'one' ? xlr : inp.type === 'mic' ? [...onA, ...onB] : [...onB, ...onA];
     const c = order.find(x => !at[x]);
     if (c) at[c] = inp.key;
   }
   const where = key => slots.filter(c => at[c] === key);
+  // 'Ch 3', 'St 1' on one mixer; 'Blue 3', 'Mackie 3/4' on two.
+  const chName = c => setup === 'one' ? (info[c].xlr ? 'Ch ' : '') + info[c].label : `${info[c].mx.short} ${info[c].label}`;
   return {
-    setup, slots, at, byKey, where, pinned,
+    setup, slots, info, at, byKey, where, chName, pinned,
     none: inputs.filter(i => !where(i.key).length),
     twice: inputs.filter(i => where(i.key).length > 1),
-    full: slots.every(c => at[c]),
+    full: xlr.every(c => at[c]),
     out: mix.out ?? ((s.mixers || []).at(-1)?.out || 'Main out L/R → PA speakers'),
   };
 }
@@ -659,9 +678,9 @@ function mixChannels(s) {
   const L = mixLayout(s), by = {};
   for (const c of L.slots) {
     const inp = L.byKey.get(L.at[c]);
-    if (inp) (by[inp.m.id] ||= []).push(c);
+    if (inp) (by[inp.m.id] ||= []).push(L.chName(c));
   }
-  for (const id in by) by[id] = (L.setup === 'one' ? 'Ch ' : '') + by[id].join(', ');
+  for (const id in by) by[id] = by[id].join(', ');
   return by;
 }
 // Every change saves the whole layout, so channels stay put from then on.
@@ -675,6 +694,54 @@ function setChannel(c, val) {
     v.mix = { ...mix, setup: L.setup, ch, known: [...L.byKey.keys()] };
   });
 }
+// A drawing of the mixer's top panel: each strip with its socket, knobs, mute, fader and a tape label
+// of what's plugged in, like the masking tape under the faders. Tapping a strip jumps to its row below.
+function mixerFace(mx, L, s) {
+  const face = el('div', `face ${mx.look}`);
+  face.setAttribute('aria-hidden', 'true');
+  const knobs = mx.look === 'epm' ? ['gain', 'eq', 'mf', 'eq', 'aux1', 'aux2', 'pan'] : ['gain', 'eq', 'eq', 'eq', 'mon', 'fx', 'pan'];
+  const strip = (num, tape, kc, cls, c) => {
+    const st = el('div', 'strip ' + cls);
+    if (kc) st.style.setProperty('--kc', kc);
+    const ks = el('span', 'knobs');
+    for (const k of knobs) ks.append(el('i', k));
+    const fd = el('span', 'fader');
+    fd.append(el('i'));
+    st.append(el('span', 'num', num), el('span', 'jack'), ks, el('span', 'mute'), fd, el('span', 'tape', tape));
+    if (c) st.addEventListener('click', () => {
+      const li = document.querySelector(`#mixers li[data-ch="${c}"]`);
+      if (!li) return;
+      li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      li.classList.remove('flash');
+      void li.offsetWidth;
+      li.classList.add('flash');
+      li.querySelector('select')?.focus({ preventScroll: true });
+    });
+    return st;
+  };
+  mx.strips.forEach((label, i) => {
+    const c = mx.id + (i + 1), k = L.at[c] || '', inp = L.byKey.get(k);
+    const tape = inp ? inp.tape : k.slice(5);
+    face.append(strip(label.replace('St ', 'ST'), tape, inp && `var(--k-${inp.m.kind})`,
+      (i < mx.xlr ? 'xlr' : 'stereo') + (tape ? '' : ' empty') + (inp && L.where(k).length > 1 ? ' twice' : ''), c));
+  });
+  if (mx.ret) face.append(strip(mx.ret, 'Blue mix', 'var(--accent)', 'stereo ret'));
+  const master = el('div', 'master');
+  if (mx.look === 'mackie') {
+    const fx = el('span', 'fxbox');
+    fx.append(el('span', 'led', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--'), el('i'));
+    master.append(fx);
+  } else {
+    const meter = el('span', 'meter');
+    for (let i = 0; i < 2; i++) meter.append(el('i'));
+    master.append(meter);
+  }
+  const fds = el('span', 'mains');
+  for (let i = 0; i < (mx.look === 'epm' ? 2 : 1); i++) { const f = el('span', 'fader'); f.append(el('i')); fds.append(f); }
+  master.append(fds, el('span', 'tape', 'Main'));
+  face.append(master);
+  return face;
+}
 function renderMixers(s) {
   const box = $('mixers');
   box.replaceChildren();
@@ -683,27 +750,30 @@ function renderMixers(s) {
   $('mix-msgs').replaceChildren();
   if (!s) return;
   const edit = canEdit();
-  const L = mixLayout(s);
+  const L = mixLayout(s), chName = L.chName;
   document.querySelectorAll('#mix-setup button').forEach(b => b.setAttribute('aria-pressed', b.dataset.setup === L.setup));
   $('mix-redo').disabled = !L.pinned;
   const label = inp => `${inp.m.name} — ${inp.what}`;
-  const chName = c => (L.setup === 'one' ? `ch ${c}` : c);
   for (const mx of MIX[L.setup]) {
-    const card = el('div', 'mixer');
-    card.append(el('h3', null, mx.name), el('p', 'role', mx.role));
+    const card = el('div', `mixer ${mx.look}`);
+    card.append(el('h3', null, mx.name), el('p', 'role', mx.role), mixerFace(mx, L, s));
     const ol = el('ol');
-    for (let i = 1; i <= mx.n; i++) {
-      const c = mx.id + i, k = L.at[c] || '', inp = L.byKey.get(k);
+    mx.strips.forEach((strip, i) => {
+      const c = mx.id + (i + 1), k = L.at[c] || '', inp = L.byKey.get(k), xlr = i < mx.xlr;
       const li = el('li', inp && L.where(k).length > 1 ? 'twice' : '');
+      li.dataset.ch = c;
       if (inp) li.style.setProperty('--kc', `var(--k-${inp.m.kind})`);
-      li.append(el('span', 'ch', c));
+      const badge = el('span', 'ch', strip);
+      badge.title = xlr ? 'Mic / DI (XLR) or line' : 'Stereo line only (1/4" L + R)';
+      li.append(badge);
       if (edit) {
         const pick = el('div', 'pick');
         const sel = el('select');
         sel.setAttribute('aria-label', `What goes on ${chName(c)}`);
-        sel.append(new Option('Spare', ''));
+        sel.append(new Option(xlr ? 'Spare' : 'Spare (line only, no mic or DI)', ''));
         // Inputs already on another channel are greyed; ones with no channel yet are marked.
-        for (const x of [...L.byKey.values()]) {
+        // Line-only channels can't take a mic or DI.
+        if (xlr) for (const x of [...L.byKey.values()]) {
           const others = L.where(x.key).filter(y => y !== c);
           const o = new Option(label(x) + (others.length ? ` (on ${others.map(chName).join(', ')})` : x.key === k ? '' : ' (no channel)'), x.key);
           if (others.length) o.className = 'used';
@@ -720,7 +790,7 @@ function renderMixers(s) {
           const t = el('input');
           t.dataset.ch = c;
           t.value = k.slice(5);
-          t.placeholder = 'e.g. Laptop (backing tracks)';
+          t.placeholder = xlr ? 'e.g. Laptop (backing tracks)' : 'e.g. Keyboard (stereo line)';
           t.setAttribute('aria-label', `What goes on ${chName(c)}`);
           t.addEventListener('change', () => setChannel(c, 'text:' + t.value.trim()));
           pick.append(t);
@@ -731,16 +801,26 @@ function renderMixers(s) {
         chip.style.setProperty('--kc', `var(--k-${inp.m.kind})`);
         li.append(chip, el('span', 'what', inp.what));
       } else if (k.slice(5)) li.append(el('span', null, k.slice(5)));
-      else li.append(el('span', 'spare', 'spare'));
+      else li.append(el('span', 'spare', xlr ? 'spare' : 'spare (line only)'));
       ol.append(li);
-    }
+    });
     if (mx.ret) {
       const li = el('li', 'ret');
-      li.append(el('span', 'ch', `${mx.id}${mx.n + 1}–${mx.n + 2}`), el('span', null, 'Mixer A (stereo submix)'));
+      li.append(el('span', 'ch', mx.ret), el('span', null, 'Blue mixer (stereo submix from its mix out L/R)'));
       ol.append(li);
     }
     card.append(ol);
     const master = !(L.setup === 'two' && mx.id === 'A');
+    const fxSel = () => {
+      const lab = el('label', 'out-lbl');
+      const sel = el('select');
+      sel.append(new Option('Not picked', ''));
+      FX_PRESETS.forEach((_, i) => sel.append(new Option(fxName(i + 1), i + 1)));
+      sel.value = s.mix?.fx || '';
+      sel.addEventListener('change', () => patchShow(v => { v.mix = { ...(v.mix || {}), fx: Number(sel.value) || 0 }; }));
+      lab.append(el('b', null, 'Effect (FX preset)'), sel);
+      return lab;
+    };
     if (master && edit) {
       const ow = el('div', 'mixer-edit out-edit');
       const lab = el('label', 'out-lbl');
@@ -755,26 +835,28 @@ function renderMixers(s) {
       ['No monitor', '1 monitor', '2 monitors'].forEach((t, n) => sel.append(new Option(t, n)));
       sel.value = monitorCount(s);
       sel.addEventListener('change', () => patchShow(v => { v.mix = { ...(v.mix || {}), monitors: Number(sel.value) }; }));
-      mlab.append(el('b', null, 'Monitor'), sel);
+      mlab.append(el('b', null, `Monitor (from ${mx.aux})`), sel);
       ow.append(lab, mlab);
+      if (mx.look === 'mackie') ow.append(fxSel());
       card.append(ow);
     } else {
-      const p = el('p', 'out');
-      p.append(el('b', null, 'Out: '), master ? L.out : 'Main out L/R → Mixer B ch 7–8 (stereo, 2 cables)');
+      const line = (b, text) => { const p = el('p', 'out'); p.append(el('b', null, b + ': '), text); card.append(p); };
+      line('Out', master ? L.out : 'Mix out L/R (XLR) → Mackie 7/8 (2 XLR to 1/4" cables)');
+      if (master && monitorCount(s)) line('Monitor', `${monitorCount(s) > 1 ? '2 stage monitors' : '1 stage monitor'} from ${mx.aux}`);
+    }
+    if (mx.look === 'mackie') {
+      const p = el('p', 'out fx-note');
+      p.append(el('b', null, 'Effect: '), s.mix?.fx ? fxName(s.mix.fx) : 'not picked yet',
+        '. Turn up the yellow FX knob on 7/8 to put it on the whole blue mix.');
       card.append(p);
-      if (master && monitorCount(s)) {
-        const m = el('p', 'out');
-        m.append(el('b', null, 'Monitor: '), monitorCount(s) > 1 ? '2 stage monitors' : '1 stage monitor');
-        card.append(m);
-      }
     }
     box.append(card);
   }
   const msg = (cls, text) => $('mix-msgs').append(el('p', 'mix-msg ' + cls, text));
   const chList = cs => cs.map(chName).join(' and ');
   if (L.twice.length) msg('warn', `On two channels: ${L.twice.map(i => `${label(i)} (${chList(L.where(i.key))})`).join(', ')}.`);
-  if (L.none.length) msg('warn', `No channel: ${L.none.map(label).join(', ')}.` + (!edit ? '' : !L.full ? ' Pick it on a spare channel.'
-    : L.setup === 'one' ? ' Every channel is taken: switch to two mixers or free one up.' : ' Every channel is taken: free one up.'));
+  if (L.none.length) msg('warn', `No channel: ${L.none.map(label).join(', ')}.` + (!edit ? '' : !L.full ? ' Pick it on a spare mic channel.'
+    : L.setup === 'one' ? ' Every mic channel is taken: switch to Blue → Mackie or free one up.' : ' Every mic channel is taken: free one up.'));
   const own = [];
   for (const l of s.lineup || []) {
     const m = get(l.member);
