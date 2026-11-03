@@ -72,17 +72,18 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
 - **Mixer** (since 2026-10-24) is built from who's on the stage plot: every Mic and DI Box in a player's gear needs an XLR channel
   (amps and drum kits are listed as "not through the mixer"). **The band's two real mixers** (David's photos, 2026-11-02):
   the blue **Soundcraft EPM8** (ch 1–8 mic/line on XLR + 1/4", Stereo 1–2 line only, XLR mix out, no effects) and the black
-  **Mackie ProFX8v2** (mic channels 1, 2, 3/4, 5/6; 7/8 stereo line only; ReadyFX, 16 presets). Setups: **Blue → Mackie**
-  (default, David's plan): vocals on the blue mixer, its mix out L/R into Mackie 7/8 (2 XLR-to-1/4" cables) so the Mackie's
-  effects reach the whole blue mix; instruments (DIs) on the Mackie, which feeds the PA. Or **Blue mixer only**.
-  Slots: A1–A10 = blue 1–8, St 1, St 2 (one mixer: 1–10); B1–B4 = Mackie 1, 2, 3/4, 5/6. Mics/DIs never go on line-only
+  **Mackie ProFX12v3** (David's photo, 2026-11-03; replaced the ProFX8v2): mic channels 1–4 (1–2 combo + Hi-Z; 1–4 have
+  Comp), 5/6, 7/8, 9/10 (mic or stereo line L/R); 11/12 line only (3.5 mm / USB 3-4); GigFX, 24 presets. Setups: **Blue → Mackie**
+  (default, David's plan): vocals on the blue mixer, its mix out L/R into Mackie 9/10 line in L + R (`MACKIE_RET`, 2 XLR-to-1/4"
+  cables) so the Mackie's effects reach the whole blue mix; instruments (DIs) on the Mackie, which feeds the PA. Or **Blue mixer only**.
+  Slots: A1–A10 = blue 1–8, St 1, St 2 (one mixer: 1–10); B1–B8 = Mackie 1, 2, 3, 4, 5/6, 7/8, 9/10, 11/12 (B7 skipped: it's the return). Mics/DIs never go on line-only
   channels. Each card draws the mixer's top panel in its real colours (`mixerFace`) with a masking-tape label per strip;
-  tapping a strip jumps to its row. `show.mix.fx` = the Mackie FX preset (1–16), shown on its LED. Data: `show.mix` (`setup`, `ch` = channel → input,
+  tapping a strip jumps to its row. `show.mix.fx` = the Mackie FX preset (1–24), shown on its LED. Data: `show.mix` (`setup`, `ch` = channel → input,
   `known` = inputs there when channels were last set, `out`, `monitors`, `fx`); unsaved channels fill in stage order, left to right, vocals first;
   any change saves the whole layout so channels stay put, and only new inputs go on a spare channel by themselves.
   **Knob and fader settings** (David, 2026-11-02, for the last rehearsal; iPad + laptop first, phones only need to not break):
   tap a strip (or its row's Knobs button, or Master knobs) for a pop-up of that strip's real controls (`CTRL`: big knobs,
-  buttons, faders; Mackie master has FX master/to-mon, graphic EQ 7 bands, FX return/Mon/Main faders); ‹ › step through the board.
+  buttons, faders; Mackie master has aux master, FX to mon, blend, phones/control room, FX / Sub 1-2 / Main faders); ‹ › step through the board.
   Drag up/down, arrow keys or wheel; double-tap resets; saved on release. `show.mix.knobs` = { strip: { control: 0–1 / true, note } },
   strip = slot or `Amain`/`Bmain`/`Bret`/`main`. The drawings show every knob's pointer, fader and lit mute; rows show a summary.
   Readouts follow the printed scales only roughly (Mackie gain = clock position). "Copy knob settings from…" copies another gig's.
@@ -93,10 +94,12 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
   **Drawings must match the boards for matching by eye** (David, 2026-11-02: "most important"): `mixerFace()` lays each board
   on its real rows (`FACE_ROWS`: 1 numbers, 2 sockets, 3–10 knob rows, 11 buttons, 12 faders, 13 tape; CSS subgrid) from the
   photos: blue stereo channels' knobs start lower (gain on the MF-freq row); blue master = 48V, EPM 8 logo, Monitor + Phones
-  knobs, Aux pre / 2-track buttons, meters, Mix L/R; Mackie master = graphic EQ, 48V, meters, ReadyFX box, USB level + thru,
-  Break, FX master / FX to mon / Phones / Tape level knobs, ST RTN mute, ST RTN / FX RTN / MON / MAIN faders. Knob looks (`KL`, `MK`):
+  knobs, Aux pre / 2-track buttons, meters, Mix L/R. Mackie (16 rows): sockets, low cut, gain + level LED, comp (1–4), EQ,
+  Mon, FX, Pan, round red-ring mute, fader with 1-2 / L-R / PFL buttons beside it; master = jacks, ProFX12v3 logo, 48V +
+  power LEDs, GigFX box (preset display, FX mute), meters, Aux master / FX to mon / Blend / Phones / Control room, To phones
+  and Break buttons, FX (+1-2) / SUB 1-2 (+L-R) / MAIN faders. Knob looks (`KL`, `MK`):
   blue = coloured cap on a skirt with a line; Mackie = black with a coloured fin. Fader marks (`FADE`) measured off the photos
-  (Mackie U at 74% of travel). Printout: page 1 flow + blue board, page 2 Mackie board, then the settings sheet.
+  (Mackie U at 74% of travel). Printout: page 1 flow + blue board, page 2 Mackie board (7.5in wide), then the settings sheet.
   **Controls work on the drawing** (David, 2026-11-02): in the editor, drag a knob or fader on the big drawing (relative drag,
   arrow keys, wheel, double-tap resets; `live()` in `mixerFace` reuses `dragValue`) and tap buttons to toggle; only the channel
   number, tape label, master labels / EPM 8 badge / FX display open the pop-up. Band app: look-only, tapping a strip opens it.

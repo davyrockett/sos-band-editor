@@ -499,10 +499,10 @@ function mixerGear(s) {
 }
 function mixerBoxes(s) {
   return mixSetup(s) === 'two' ? [
-    { item: 'Soundcraft EPM8 Mixer (blue)', how: 'Submix → Mackie ch 7/8', qty: 1 },
-    { item: 'Mackie ProFX8v2 Mixer (black)', how: 'Master + effects → PA', qty: 1 },
+    { item: 'Soundcraft EPM8 Mixer (blue)', how: `Submix → Mackie ch ${MACKIE_RET}`, qty: 1 },
+    { item: 'Mackie ProFX12v3 Mixer (black)', how: 'Master + effects → PA', qty: 1 },
     { item: 'Power Cables (Mixers)', how: '1 per mixer', qty: 2 },
-    { item: 'XLR to 1/4" Cables', how: 'Blue mix out L + R → Mackie 7/8', qty: 2 },
+    { item: 'XLR to 1/4" Cables', how: `Blue mix out L + R → Mackie ${MACKIE_RET} line in L + R`, qty: 2 },
   ] : [
     { item: 'Soundcraft EPM8 Mixer (blue)', how: '', qty: 1 },
     { item: 'Power Cable (Mixer)', how: '', qty: 1 },
@@ -601,25 +601,30 @@ function notesBox(s, key, label) {
    The band's two mixers (David's photos, 2026-11-02):
    - Soundcraft EPM8 (blue): channels 1–8 take a mic or DI (XLR) or a line; Stereo 1 and 2 take lines only (1/4" L/R).
      Mix out L/R on XLR. No effects.
-   - Mackie ProFX8v2 (black): mic channels 1, 2, 3/4 and 5/6 (3/4 and 5/6 take a mic or a stereo line),
-     7/8 is stereo line only; ReadyFX effects (16 presets) with an FX knob on every channel.
+   - Mackie ProFX12v3 (black, David's photo 2026-11-03; replaced the ProFX8v2): mic channels 1–4 (1–2 combo XLR/1/4"
+     with Hi-Z; 1–4 have a compressor), 5/6, 7/8 and 9/10 (a mic, or a stereo line on 1/4" L + R); 11/12 is line only
+     (3.5 mm stereo or USB 3-4). GigFX effects (24 presets) with an FX knob on every channel.
    The channels come from who's on the stage plot: each Mic and DI Box in a player's gear needs an XLR channel.
-   Setups: 'two' (default, David's plan): the blue mixer takes the vocals and submixes into Mackie 7/8, so the
-   Mackie's effects reach the whole blue mix; the Mackie takes the instruments and feeds the PA. 'one': blue mixer only.
+   Setups: 'two' (default, David's plan): the blue mixer takes the vocals and submixes into Mackie 9/10 (line in L + R),
+   so the Mackie's effects reach the whole blue mix; the Mackie takes the instruments and feeds the PA. 'one': blue mixer only.
    show.mix = { setup, ch: { '1': key, 'A1': key, 'B3': key… }, known: [keys], out, monitors, fx }
-   Slots are the mixer's letter + strip number: A1–A10 = blue 1–8, St 1, St 2; B1–B4 = Mackie 1, 2, 3/4, 5/6.
+   Slots are the mixer's letter + strip number: A1–A10 = blue 1–8, St 1, St 2; B1–B8 = Mackie 1, 2, 3, 4, 5/6, 7/8,
+   9/10, 11/12 (B7 = 9/10 is the blue mix's return, not a slot, on Blue → Mackie).
    key = 'memberId|mic|0', 'memberId|di|0', or 'text:…' (anything else typed in). Until a channel is set,
    inputs fill the channels in stage order (left to right), vocals first. After that, only new inputs
    (not in `known`) go on the first spare channel; the page warns when an input has no channel or two. */
 const EPM8 = { short: 'Blue', model: 'Soundcraft EPM8', look: 'epm', strips: ['1', '2', '3', '4', '5', '6', '7', '8', 'St 1', 'St 2'], xlr: 8 };
-const MACKIE = { short: 'Mackie', model: 'Mackie ProFX8v2', look: 'mackie', strips: ['1', '2', '3/4', '5/6'], xlr: 4 };
+const MACKIE = { short: 'Mackie', model: 'Mackie ProFX12v3', look: 'mackie', strips: ['1', '2', '3', '4', '5/6', '7/8', '9/10', '11/12'], xlr: 7 };
+// Where the blue mixer's mix out comes into the Mackie (a stereo channel's line in L + R).
+const MACKIE_RET = '9/10';
 const MIX = {
   one: [{ ...EPM8, id: '', name: 'Blue mixer', role: 'Soundcraft EPM8 · everything, out to the PA', aux: 'AUX 1 OUT' }],
   two: [{ ...EPM8, id: 'A', name: 'Blue mixer', role: 'Soundcraft EPM8 · vocals submix into the Mackie' },
-    { ...MACKIE, id: 'B', name: 'Mackie', role: 'Mackie ProFX8v2 · instruments, effects + master', ret: '7/8', aux: 'MON SEND' }],
+    { ...MACKIE, id: 'B', name: 'Mackie', role: 'Mackie ProFX12v3 · instruments, effects + master', ret: MACKIE_RET, aux: 'MON SEND' }],
 };
-const FX_PRESETS = ['Bright Room', 'Warm Lounge', 'Small Stage', 'Warm Theater', 'Warm Hall', 'Concert Hall', 'Plate Reverb',
-  'Cathedral', 'Chorus', 'Chorus + Rev', 'Doubler', 'Echo', 'Delay 1 (Fast)', 'Delay 2 (Med)', 'Delay 3 (Slow)', 'Pan Delay'];
+const FX_PRESETS = ['Bright Room', 'Warm Lounge', 'Small Stage', 'Warm Theater', 'Warm Hall', 'Concert Hall', 'Cathedral',
+  'Small Plate', 'Large Plate', 'Chorus 1', 'Chorus 2', 'Delay + Reverb', 'Doubler', 'Echo', 'Delay 1', 'Delay 2', 'Delay 3',
+  'Ping-Pong Delay', 'Overdrive/Distortion', 'Spring Reverb', 'Early Reflections', 'Auto-Wah', 'Flange', 'Slapback Reverb'];
 const fxName = n => n ? `${String(n).padStart(2, '0')} ${FX_PRESETS[n - 1]}` : '';
 const mixSetup = s => (s.mix?.setup === 'one' ? 'one' : 'two');
 function mixInputs(s) {
@@ -639,7 +644,7 @@ function mixLayout(s) {
   const mix = s.mix || {};
   const setup = mixSetup(s);
   const info = {};
-  for (const mx of MIX[setup]) mx.strips.forEach((label, i) => { info[mx.id + (i + 1)] = { mx, label, xlr: i < mx.xlr }; });
+  for (const mx of MIX[setup]) mx.strips.forEach((label, i) => { if (label !== mx.ret) info[mx.id + (i + 1)] = { mx, label, xlr: i < mx.xlr }; });
   const slots = Object.keys(info);
   const inputs = mixInputs(s);
   const byKey = new Map(inputs.map(i => [i.key, i]));
@@ -707,8 +712,11 @@ const F = {
   db: (a, b) => v => `${sgn(Math.round(a + v * (b - a)))} dB`,
   // The Mackie's gain marks don't say much: give the pointer's clock position.
   clock: v => { const m = Math.round((7 + v * 10) * 2) / 2, h = Math.floor(m) % 12 || 12; return m % 1 ? `${h}:30` : `${h} o'clock`; },
-  // Mackie MON and FX knobs: off … U (unity) at 12 o'clock … +15.
-  uni: v => v < .02 ? 'Off' : Math.abs(v - .5) < .02 ? 'U' : v > .5 ? `+${Math.round((v - .5) * 30)} dB` : `${sgn(Math.round(40 * Math.log10(v / .5)))} dB`,
+  // Mackie MON and FX knobs: off … U (unity) at 12 o'clock … +10.
+  uni: v => v < .02 ? 'Off' : Math.abs(v - .5) < .02 ? 'U' : v > .5 ? `+${Math.round((v - .5) * 20)} dB` : `${sgn(Math.round(40 * Math.log10(v / .5)))} dB`,
+  comp: v => v < .02 ? 'Off' : v > .98 ? 'Max' : String(Math.round(v * 20) / 2),
+  // Mackie BLEND: the main mix (Inputs) … USB 1-2.
+  blend: v => v < .02 ? 'Inputs' : v > .98 ? 'USB 1-2' : `${Math.round((1 - v) * 100)}% inputs`,
 };
 // Fader scales as printed beside the faders: [how far up (0–1), dB]; null = ∞ (off).
 const FADE = {
@@ -737,10 +745,12 @@ const fin = p => ({ c: '#272727', s: '#121212', p, w: .26 });
 const MK = { white: fin('#F0F0F0'), blue: fin('#1E88E5'), green: fin('#7ED321'), yellow: fin('#F5B800'), grey: fin('#C8C8C8') };
 const knob = (k, label, look, fmt, def = 0, hint = '') => ({ k, t: 'knob', label, ...look, fmt, def, hint });
 const fader = (k, label, marks, unity, more) => ({ k, t: 'fader', label, marks, unity, fmt: fadeDb(marks, unity), def: 0, ...more });
-const btn = (k, label) => ({ k, t: 'btn', label, def: false });
-// A graphic EQ band: a small ±15 dB slider.
-const geq = f => ({ k: 'g' + f, t: 'fader', label: f, marks: [[0, -15], [.5, 0], [1, 15]], unity: '0', fmt: F.eq, def: .5, small: true });
+// tag = the button's printed name, drawn under it beside the fader.
+const btn = (k, label, tag) => ({ k, t: 'btn', label, tag, def: false });
 const MK_EQ = [knob('hi', 'Hi', MK.blue, F.eq, .5, '12 kHz'), knob('mid', 'Mid', MK.blue, F.eq, .5, '2.5 kHz'), knob('low', 'Low', MK.blue, F.eq, .5, '80 Hz')];
+// Every Mackie channel's lower half: sends, pan, mute, and the fader with its 1-2 / L-R / PFL buttons beside it.
+const MK_SEND = [knob('mon', 'Mon', MK.green, F.uni), knob('fx', 'FX', MK.yellow, F.uni), knob('pan', 'Pan', MK.grey, F.pan, .5),
+  btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U'), btn('to12', 'To 1-2', '1-2'), btn('lr', 'To L-R (main)', 'L-R'), btn('pfl', 'PFL solo', 'PFL')];
 const CTRL = {
   epm: [knob('gain', 'Gain', KL.red, F.db(5, 60)), knob('hf', 'HF', KL.eq, F.eq, .5, 'treble'), knob('mfq', 'MF freq', KL.mfw, F.freq, .5, 'which mids'),
     knob('mf', 'MF', KL.eq, F.eq, .5, 'mids'), knob('lf', 'LF', KL.eq, F.eq, .5, 'bass'), knob('aux1', 'Aux 1', KL.teal, F.ten),
@@ -751,40 +761,46 @@ const CTRL = {
   epmMain: [btn('p48', '48V phantom'), knob('monlvl', 'Monitor', KL.red, F.ten), knob('phones', 'Phones', KL.red, F.ten),
     btn('aux1pre', 'Aux 1 pre'), btn('aux2pre', 'Aux 2 pre'), btn('trkmon', '2-track → monitor'), btn('trkmix', '2-track → mix'),
     fader('fader', 'Mix L', FADE.epmMix, '0 dB', { cap: '#F3D417' }), fader('faderR', 'Mix R', FADE.epmMix, '0 dB', { cap: '#F3D417', same: 'fader' })],
-  mackie: [knob('gain', 'Gain', MK.white, F.clock), btn('lowcut', 'Low cut 100 Hz'), ...MK_EQ, knob('mon', 'Mon', MK.green, F.uni),
-    knob('fx', 'FX', MK.yellow, F.uni), knob('pan', 'Pan', MK.grey, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U')],
-  mackieSt: [knob('gain', 'Gain', MK.white, F.clock), ...MK_EQ, knob('mon', 'Mon', MK.green, F.uni), knob('fx', 'FX', MK.yellow, F.uni),
-    knob('pan', 'Balance', MK.grey, F.pan, .5), btn('mute', 'Mute'), fader('fader', 'Fader', FADE.mackie, 'U')],
-  mackieMain: [btn('p48', '48V phantom'), btn('eqmon', 'Graphic EQ on Mon'), btn('eqin', 'Graphic EQ in'),
-    ...['125', '250', '500', '1k', '2k', '4k', '8k'].map(geq), btn('fxmute', 'FX mute'),
-    knob('usb', 'USB input', MK.white, F.uni), btn('usbthru', 'USB thru'), btn('brk', 'Break (mutes all)'),
-    knob('fxmaster', 'FX master', MK.yellow, F.uni), knob('fxmon', 'FX to mon', MK.green, F.uni), knob('phones', 'Phones', MK.white, F.ten),
-    knob('tape', 'Tape level', MK.white, F.uni), btn('stmute', 'ST return mute'),
-    fader('strtn', 'ST return', FADE.mackie, 'U'), fader('fxrtn', 'FX return', FADE.mackie, 'U'), fader('mon', 'Mon', FADE.mackie, 'U'),
-    fader('fader', 'Main', FADE.mackie, 'U', { main: true })],
+  // ProFX12v3 channels 1–4 (Hi-Z is added on 1 and 2), the stereo channels 5/6, 7/8, 9/10, and line-only 11/12.
+  mackie: [knob('gain', 'Gain', MK.white, F.clock), btn('lowcut', 'Low cut 100 Hz'), knob('comp', 'Comp', MK.white, F.comp), ...MK_EQ, ...MK_SEND],
+  mackieSt: [knob('gain', 'Gain', MK.white, F.clock), btn('lowcut', 'Low cut 100 Hz'), ...MK_EQ, ...MK_SEND],
+  mackieLine: [btn('usb34', 'USB 3-4'), knob('gain', 'Gain', MK.white, F.db(-20, 20), .5), ...MK_EQ, ...MK_SEND],
+  mackieMain: [btn('p48', '48V phantom'), btn('fxmute', 'FX mute'),
+    knob('aux', 'Aux master', MK.green, F.uni), knob('fxmon', 'FX to mon', MK.green, F.uni), knob('blend', 'Blend', MK.white, F.blend),
+    btn('tophones', 'To phones / control room'), knob('phones', 'Phones', MK.white, F.ten), knob('ctrlrm', 'Control room', MK.white, F.ten),
+    btn('brk', 'Break (mutes all)'), fader('fxrtn', 'FX return', FADE.mackie, 'U'), btn('fx12', 'FX → 1-2', '1-2'),
+    fader('sub', 'Sub 1-2', FADE.mackie, 'U'), btn('sublr', 'Sub 1-2 → L-R', 'L-R'), fader('fader', 'Main', FADE.mackie, 'U', { main: true })],
 };
-// Where each control sits on the drawing, by the board's rows (1 = numbers, 2 = sockets, 3–10 = knob rows,
-// 11 = buttons, 12 = faders, 13 = tape). Master sections give [row, column] inside the master area.
+// Where each control sits on the drawing, by the board's rows. Blue mixer: 1 = numbers, 2 = sockets, 3–10 = knob rows,
+// 11 = buttons, 12 = faders, 13 = tape. Mackie ProFX12v3: 1 = numbers, 2–4 = sockets (XLR, then line / Hi-Z, insert / line R),
+// 5 = low cut, 6 = gain, 7 = comp, 8–10 = EQ, 11 = mon, 12 = FX, 13 = pan, 14 = mute, 15 = faders, 16 = tape.
+// 'fb' = in the little column of buttons beside the fader. Master sections give [row, column] inside the master area.
+const MK_ROWS = { lowcut: 5, gain: 6, comp: 7, hi: 8, mid: 9, low: 10, mon: 11, fx: 12, pan: 13, mute: 14, fader: 15, tape: 16, to12: 'fb', lr: 'fb', pfl: 'fb' };
 const FACE_ROWS = {
-  epm: { gain: 3, hf: 4, mfq: 5, mf: 6, lf: 7, aux1: 8, aux2: 9, pan: 10, mute: 11 },
-  epmSt: { gain: 5, hf: 6, lf: 7, aux1: 8, aux2: 9, pan: 10, mute: 11 },
-  mackie: { hiz: 1, gain: 3, lowcut: 4, hi: 5, mid: 6, low: 7, mon: 8, fx: 9, pan: 10, mute: 11 },
+  epm: { gain: 3, hf: 4, mfq: 5, mf: 6, lf: 7, aux1: 8, aux2: 9, pan: 10, mute: 11, fader: 12, tape: 13 },
+  epmSt: { gain: 5, hf: 6, lf: 7, aux1: 8, aux2: 9, pan: 10, mute: 11, fader: 12, tape: 13 },
+  mackie: { ...MK_ROWS, hiz: 3 },
+  mackieSt: MK_ROWS,
+  mackieLine: { ...MK_ROWS, usb34: 5 },
   epmMain: { p48: [2, 1], monlvl: [7, 1], phones: [7, 2], aux1pre: [8, 1], aux2pre: [9, 1], trkmon: [10, 1], trkmix: [11, 1], fader: [12, 1], faderR: [12, 2] },
-  mackieMain: { p48: [2, 4], eqmon: [6, 1], eqin: [6, 3], usb: [8, 3], usbthru: [9, 3], brk: [9, 4], fxmaster: [10, 1], fxmon: [10, 2],
-    phones: [10, 3], tape: [10, 4], stmute: [11, 1], strtn: [12, 1], fxrtn: [12, 2], mon: [12, 3], fader: [12, 4] },
+  mackieMain: { p48: [6, 3], fxmute: 'fx', aux: [11, 1], blend: [11, 2], phones: [11, 3], fxmon: [12, 1], tophones: [12, 2], ctrlrm: [12, 3],
+    brk: [13, 3], fxrtn: [15, 1], fx12: 'fb1', sub: [15, 2], sublr: 'fb2', fader: [15, 3], tape: 16 },
 };
 // Every strip of the setup, in board order, each mixer's master last.
 function knobStrips(L) {
   const out = [];
   for (const mx of MIX[L.setup]) {
     mx.strips.forEach((label, i) => {
+      if (label === mx.ret) {
+        out.push({ key: mx.id + 'ret', mx, type: 'mackieSt', label, ret: true, name: `${mx.short} ${label}`, what: 'Blue mixer (stereo submix)', ctrls: CTRL.mackieSt });
+        return;
+      }
       const key = mx.id + (i + 1), xlr = i < mx.xlr;
-      const type = mx.look === 'epm' ? (xlr ? 'epm' : 'epmSt') : 'mackie';
+      const type = mx.look === 'epm' ? (xlr ? 'epm' : 'epmSt') : !xlr ? 'mackieLine' : label.includes('/') ? 'mackieSt' : 'mackie';
       let ctrls = CTRL[type];
-      if (mx.look === 'mackie' && i === 0) ctrls = [ctrls[0], btn('hiz', 'Line Hi-Z'), ...ctrls.slice(1)];
+      if (type === 'mackie' && i < 2) ctrls = [ctrls[0], btn('hiz', 'Hi-Z (guitar / bass straight in)'), ...ctrls.slice(1)];
       out.push({ key, mx, type, label, xlr, name: L.chName(key), ctrls });
     });
-    if (mx.ret) out.push({ key: mx.id + 'ret', mx, type: 'mackie', label: mx.ret, ret: true, name: `${mx.short} ${mx.ret}`, what: 'Blue mixer (stereo submix)', ctrls: CTRL.mackieSt });
     const type = mx.look + 'Main';
     out.push({ key: mx.id + 'main', mx, type, main: true, name: `${mx.name} master`, what: mx.model, ctrls: CTRL[type] });
   }
@@ -851,7 +867,13 @@ function mixerFace(mx, L, s) {
       cells.get(key).nodes.push(n);
     };
     const ctrl = c => live(c, c.t === 'knob' ? faceKnob(c, ctrlVal(vals, c)) : c.t === 'fader' ? faceFader(c, ctrlVal(vals, c))
-      : faceBtn(c.k === 'mute' ? 'mute' : c.k === 'hiz' || c.k === 'lowcut' ? 'sm' : '', vals[c.k]));
+      : faceBtn(c.k === 'mute' ? 'mute' : c.tag || /^(hiz|lowcut|usb34)$/.test(c.k) ? 'sm' : '', vals[c.k]));
+    // The little column of buttons beside a Mackie fader, each with its printed name under it.
+    const fbCol = cs => {
+      const b = el('span', 'fbtns');
+      for (const c of cs) b.append(ctrl(c), el('small', null, c.tag));
+      return b;
+    };
     // Editor: the control works where it's drawn, saved as you let go (the page then redraws).
     const live = (c, n) => {
       if (!edit) return n;
@@ -886,23 +908,27 @@ function mixerFace(mx, L, s) {
     let node;
     if (st.main) {
       node = el('div', 'master');
-      for (const c of st.ctrls) if (rows[c.k]) add(...rows[c.k], ctrl(c));
-      const led = on => el('i', 'led' + (on ? ' on' : ''));
+      const inside = {};   // controls drawn inside something else (the FX box, beside a fader)
+      for (const c of st.ctrls) {
+        const r = rows[c.k];
+        if (Array.isArray(r)) add(...r, ctrl(c));
+        else if (r) inside[r] = c;
+      }
+      const led = (on, cls = '') => el('i', `led ${cls}${on ? ' on' : ''}`);
       if (mx.look === 'mackie') {
-        const eq = el('span', 'geq');
-        for (const c of st.ctrls.filter(x => x.small)) {
-          const b = el('span', 'band');
-          b.append(ctrl(c), el('small', null, c.label));
-          eq.append(b);
-        }
-        add(2, 1, eq, 4, 3);
+        // Sockets along the top: MON SEND / FX SEND, the main outs (XLR, then 1/4"), control room / sub out, foot switch / phones.
+        for (const r of [2, 3, 4]) for (const col of [1, 2, 3]) add(r, col, el('span', r === 2 && col > 1 ? 'jack xlr' : 'jack'));
+        add(5, 1, opener(el('span', 'logo', 'ProFX12v3')), 1, 2);
+        add(5, 3, led(vals.p48));
+        add(5, 3, led(true, 'pw'));   // power
         const fx = el('span', 'fxbox');
-        fx.append(opener(el('span', 'led7', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--')), faceKnob({ c: '#272727', s: '#121212', p: 'transparent' }, 0),
-          ctrl(st.ctrls.find(c => c.k === 'fxmute')));
-        add(7, 1, fx, 3, 2);
-        add(2, 4, led(vals.p48));
-        add(4, 4, el('span', 'meter'), 4, 1);
-        ['ST RTN', 'FX RTN', 'MON', 'MAIN'].forEach((t, i) => add(13, i + 1, opener(el('span', 'plabel', t))));
+        fx.append(el('small', null, 'GigFX'), opener(el('span', 'led7', s.mix?.fx ? String(s.mix.fx).padStart(2, '0') : '--')),
+          faceKnob({ c: '#272727', s: '#121212', p: 'transparent' }, 0), ctrl(inside.fx));
+        add(6, 1, fx, 5, 2);
+        add(7, 3, el('span', 'meter'), 4, 1);
+        ['FX', 'SUB 1-2', 'MAIN'].forEach((t, i) => add(14, i + 1, opener(el('span', 'plabel big', t))));
+        add(15, 1, fbCol([inside.fb1]));
+        add(15, 2, fbCol([inside.fb2]));
       } else {
         add(2, 1, led(vals.p48));
         add(4, 1, opener(el('span', 'logo', 'EPM 8')), 2, 2);
@@ -916,12 +942,22 @@ function mixerFace(mx, L, s) {
       const kc = st.ret ? 'var(--accent)' : inp && `var(--k-${inp.m.kind})`;
       if (kc) node.style.setProperty('--kc', kc);
       add(1, 1, opener(el('span', 'num', st.label.replace('St ', 'ST'))));
-      if (st.type === 'epmSt') { add(2, 1, el('span', 'jack')); add(3, 1, el('span', 'jack')); }
-      else add(2, 1, el('span', st.xlr ? 'jack xlr' : 'jack'));
-      if (st.type === 'epm' || st.type === 'epmSt') add(11, 1, faceBtn('pfl'));
-      else add(11, 1, el('i', 'led'));   // the Mackie's OL light
-      for (const c of st.ctrls) add(c.t === 'fader' ? 12 : rows[c.k], 1, ctrl(c));
-      add(13, 1, opener(el('span', 'tape', tape)));
+      if (mx.look === 'epm') {
+        if (st.type === 'epmSt') { add(2, 1, el('span', 'jack')); add(3, 1, el('span', 'jack')); }
+        else add(2, 1, el('span', 'jack xlr'));
+        add(11, 1, faceBtn('pfl'));
+      } else if (st.type === 'mackieLine') add(4, 1, el('span', 'jack mini'));
+      else {
+        // The XLR, then the line in (1–2: the Hi-Z button instead) and the insert (stereo channels: line L and R).
+        add(2, 1, el('span', 'jack xlr'));
+        if (!st.ctrls.some(c => c.k === 'hiz')) add(3, 1, el('span', 'jack'));
+        add(4, 1, el('span', 'jack'));
+      }
+      const beside = st.ctrls.filter(c => rows[c.k] === 'fb');
+      for (const c of st.ctrls) if (!beside.includes(c)) add(rows[c.k], 1, ctrl(c));
+      if (beside.length) add(rows.fader, 1, fbCol(beside));
+      if (mx.look === 'mackie') add(rows.gain, 1, el('i', 'led'));   // the level-set light beside the gain
+      add(rows.tape, 1, opener(el('span', 'tape', tape)));
     }
     for (const { r, col, rs, cs, nodes } of cells.values()) {
       const cell = el('span', 'cell');
@@ -953,7 +989,7 @@ function mixFlow(L, s) {
   if (L.setup === 'two') {
     g = box(10, 20, 170, 56, [count('A'), 'into the blue mixer'], 'src') + box(10, 124, 170, 56, [count('B'), 'into the Mackie'], 'src')
       + box(240, 12, 190, 72, ['BLUE MIXER', 'Soundcraft EPM8'], 'epm')
-      + box(500, 12, 200, 176, ['MACKIE', 'ProFX8v2', '7/8 ← blue mix', fx], 'mackie')
+      + box(500, 12, 200, 176, ['MACKIE', 'ProFX12v3', `${MACKIE_RET} ← blue mix`, fx], 'mackie')
       + box(770, 12, 120, 72, ['PA', 'Main out L/R'], 'out')
       + (mons ? box(770, 116, 120, 72, [monTxt.replace(' stage', ''), 'from MON SEND'], 'out') + arrow(700, 152, 770, 152) : '')
       + arrow(180, 48, 240, 48) + arrow(180, 152, 500, 152) + arrow(430, 48, 500, 48, 'XLR L/R') + arrow(700, 48, 770, 48);
@@ -1029,28 +1065,19 @@ function mixPrint(L, s) {
     const st = strips.find(x => x.key === mx.id + 'main'), vals = knobVals(s, st.key), set = Object.keys(vals).length > 0;
     const m = el('div', 'mp-master');
     m.append(el('b', 'mp-mh', 'Master'));
-    const cell = (c, parent) => {
-      const d = el('span', 'mp-cell' + (c.small ? ' small' : ''));
+    for (const c of st.ctrls) if (c.t !== 'btn') {
+      const d = el('span', 'mp-cell');
       const v = ctrlVal(vals, c);
       d.append(el('span', 'mp-l', c.label), set ? (c.t === 'knob' ? miniKnob(c, v) : miniFader(v)) : el('span', 'mp-blank'), el('span', 'mp-v', set ? c.fmt(v) : ''));
-      parent.append(d);
-    };
-    for (const c of st.ctrls) if (c.t !== 'btn' && !c.small) cell(c, m);
-    if (st.ctrls.some(c => c.small)) {
-      const g = el('span', 'mp-geq');
-      g.append(el('span', 'mp-l', `Graphic EQ${vals.eqin ? '' : ' (bypassed)'}${vals.eqmon ? ' on Mon' : ' on Main'}`));
-      const row = el('span', 'mp-geq-row');
-      for (const c of st.ctrls) if (c.small) cell(c, row);
-      g.append(row);
-      m.append(g);
+      m.append(d);
     }
-    const on = st.ctrls.filter(c => c.t === 'btn' && vals[c.k] && !/^eq/.test(c.k)).map(c => c.label);
+    const on = st.ctrls.filter(c => c.t === 'btn' && vals[c.k]).map(c => c.label);
     const info = el('div', 'mp-info');
     const line = (b, text) => { const p = el('p'); p.append(el('b', null, b + ': '), text); info.append(p); };
     if (on.length) line('On', on.join(', '));
     if (vals.note) line('Note', vals.note);
     const master = !(L.setup === 'two' && mx.id === 'A');
-    line('Out', master ? L.out : 'Mix out L/R (XLR) → Mackie 7/8');
+    line('Out', master ? L.out : `Mix out L/R (XLR) → Mackie ${MACKIE_RET}`);
     if (master) line('Monitor', monitorCount(s) ? `${monitorCount(s) > 1 ? '2 stage monitors' : '1 stage monitor'} from ${mx.aux}` : 'none');
     if (mx.look === 'mackie') line('Effect', s.mix?.fx ? fxName(s.mix.fx) : '');
     m.append(info);
@@ -1095,12 +1122,19 @@ function renderMixers(s) {
     card.append(el('h3', null, mx.name), el('p', 'role', mx.role), mixerFace(mx, L, s));
     const ol = el('ol');
     mx.strips.forEach((strip, i) => {
+      if (strip === mx.ret) {
+        const li = el('li', 'ret');
+        li.append(el('span', 'ch', strip), el('span', null, 'Blue mixer (stereo submix from its mix out L/R)'));
+        knobBits(li, mx.id + 'ret');
+        ol.append(li);
+        return;
+      }
       const c = mx.id + (i + 1), k = L.at[c] || '', inp = L.byKey.get(k), xlr = i < mx.xlr;
       const li = el('li', inp && L.where(k).length > 1 ? 'twice' : '');
       li.dataset.ch = c;
       if (inp) li.style.setProperty('--kc', `var(--k-${inp.m.kind})`);
       const badge = el('span', 'ch', strip);
-      badge.title = xlr ? 'Mic / DI (XLR) or line' : 'Stereo line only (1/4" L + R)';
+      badge.title = xlr ? 'Mic / DI (XLR) or line' : mx.look === 'mackie' ? 'Line only (3.5 mm stereo or USB 3-4)' : 'Stereo line only (1/4" L + R)';
       li.append(badge);
       if (edit) {
         const pick = el('div', 'pick');
@@ -1141,12 +1175,6 @@ function renderMixers(s) {
       knobBits(li, c);
       ol.append(li);
     });
-    if (mx.ret) {
-      const li = el('li', 'ret');
-      li.append(el('span', 'ch', mx.ret), el('span', null, 'Blue mixer (stereo submix from its mix out L/R)'));
-      knobBits(li, mx.id + 'ret');
-      ol.append(li);
-    }
     card.append(ol);
     const master = !(L.setup === 'two' && mx.id === 'A');
     const fxSel = () => {
@@ -1179,7 +1207,7 @@ function renderMixers(s) {
       card.append(ow);
     } else {
       const line = (b, text) => { const p = el('p', 'out'); p.append(el('b', null, b + ': '), text); card.append(p); };
-      line('Out', master ? L.out : 'Mix out L/R (XLR) → Mackie 7/8 (2 XLR to 1/4" cables)');
+      line('Out', master ? L.out : `Mix out L/R (XLR) → Mackie ${MACKIE_RET} line in L + R (2 XLR to 1/4" cables)`);
       if (master && monitorCount(s)) line('Monitor', `${monitorCount(s) > 1 ? '2 stage monitors' : '1 stage monitor'} from ${mx.aux}`);
     }
     const ms = el('div', 'master-row');
@@ -1192,7 +1220,7 @@ function renderMixers(s) {
     if (mx.look === 'mackie') {
       const p = el('p', 'out fx-note');
       p.append(el('b', null, 'Effect: '), s.mix?.fx ? fxName(s.mix.fx) : 'not picked yet',
-        '. Turn up the yellow FX knob on 7/8 to put it on the whole blue mix.');
+        `. Turn up the yellow FX knob on ${MACKIE_RET} to put it on the whole blue mix.`);
       card.append(p);
     }
     box.append(card);
@@ -1293,7 +1321,7 @@ function drawKnobs() {
   const body = $('knob-body');
   body.className = `knob-body look-${st.mx.look}`;
   body.replaceChildren();
-  const left = el('div', 'kb-left'), btns = el('div', 'kb-btns'), knobs = el('div', 'kb-knobs'), geqs = el('div', 'kb-geq'), faders = el('div', 'kb-faders');
+  const left = el('div', 'kb-left'), btns = el('div', 'kb-btns'), knobs = el('div', 'kb-knobs'), faders = el('div', 'kb-faders');
   for (const c of st.ctrls) {
     let v = ctrlVal(vals, c);
     const save = () => { if (v !== ctrlVal(knobVals(currentShow(), st.key), c)) setKnob(st.key, c.k, v === c.def && !c.same ? undefined : v); };
@@ -1306,7 +1334,7 @@ function drawKnobs() {
       btns.append(b);
       continue;
     }
-    const cell = el('div', c.t === 'knob' ? 'kcell' : 'fcell' + (c.small ? ' small' : ''));
+    const cell = el('div', c.t === 'knob' ? 'kcell' : 'fcell');
     const lab = el('span', 'klab', c.label);
     if (c.hint) lab.append(el('small', null, c.hint));
     const out = el('span', 'kval');
@@ -1334,11 +1362,10 @@ function drawKnobs() {
     if (edit) dragValue(ctl, c, () => v, nv => { v = nv; draw(); }, save, () => (c.t === 'knob' ? 220 : ctl.clientHeight - 28));
     else { ctl.setAttribute('role', 'img'); ctl.setAttribute('aria-label', `${c.label}: ${c.fmt(v)}`); }
     cell.append(lab, ctl, out);
-    (c.t === 'knob' ? knobs : c.small ? geqs : faders).append(cell);
+    (c.t === 'knob' ? knobs : faders).append(cell);
   }
   if (btns.childElementCount) left.append(btns);
   if (knobs.childElementCount) left.append(knobs);
-  if (geqs.childElementCount) left.append(el('span', 'lbl', 'Graphic EQ'), geqs);
   body.append(left, faders);
   const foot = $('knob-foot');
   foot.replaceChildren();

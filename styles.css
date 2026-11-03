@@ -232,17 +232,17 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .mixer { background: var(--surface); border: 2px solid var(--line); border-radius: var(--r); padding: 14px; min-width: 0; }
 .mixer.epm { flex: 12 1 330px; border-color: #4A68B0; }
 .mixer.mackie { flex: 8 1 280px; border-color: #39A84A; }
-/* The drawing of each whole board, on the board's own rows (1 numbers, 2 sockets, 3–10 knobs, 11 buttons, 12 faders,
-   13 tape) so it can be matched by eye. Its real colours, so the same in light and dark. Sizes follow the drawing's
+/* The drawing of each whole board, on the board's own rows (blue: 1 numbers, 2 sockets, 3–10 knobs, 11 buttons, 12 faders,
+   13 tape; Mackie: 16 rows, see FACE_ROWS) so it can be matched by eye. Its real colours, so the same in light and dark. Sizes follow the drawing's
    width (--u ≈ one strip), so it's big on an iPad or laptop and still fits a phone. */
 .face { container-type: inline-size; display: grid; grid-template-rows: repeat(13, auto); gap: clamp(3px, .55vw, 7px) 2px; padding: 8px 6px 6px; border-radius: 8px; margin: 0 0 12px; }
 .face.epm { grid-template-columns: repeat(12, minmax(0, 1fr)); background: #23325C; --lab: #DCE1EC; --cap: #F2F2EE; max-width: 1000px; }
-.face.mackie { grid-template-columns: repeat(9, minmax(0, 1fr)); background: #1A1B1B; --lab: #ECECEC; --cap: #2C2C2C; max-width: 760px; }
+.face.mackie { grid-template-columns: repeat(11, minmax(0, 1fr)); grid-template-rows: repeat(16, auto); background: #1A1B1B; --lab: #ECECEC; --cap: #2C2C2C; max-width: 1000px; }
 .face > * { --u: 8.33cqw; --ks: clamp(10px, calc(var(--u) * .46), 32px); }
-.face.mackie > * { --u: 11.1cqw; --ks: clamp(10px, calc(var(--u) * .4), 32px); }
+.face.mackie > * { --u: 9.09cqw; --ks: clamp(10px, calc(var(--u) * .42), 32px); }
 .strip, .face .master { grid-row: 1 / -1; display: grid; grid-template-rows: subgrid; border-radius: 4px; cursor: pointer; padding-bottom: 3px; }
 .face .master { grid-column: span 2; grid-template-columns: subgrid; column-gap: 2px; border-left: 1px solid rgba(255, 255, 255, .14); }
-.face.mackie .master { grid-column: span 4; }
+.face.mackie .master { grid-column: span 3; border-left: 2px solid #39B54A; background: rgba(57, 181, 74, .07); }
 .face:not(.edit) .strip:hover, .face:not(.edit) .master:hover { background: rgba(255, 255, 255, .07); }
 /* Editor: drag knobs and faders right on the drawing, tap buttons; the number / tape / master labels open the pop-up */
 .face.edit .strip, .face.edit .master { cursor: default; }
@@ -266,6 +266,8 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .face .bt { flex: none; width: calc(var(--ks) * .8); height: calc(var(--ks) * .55); border-radius: 2px; background: #D9D9D6; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25); }
 .face .bt.sm { width: calc(var(--ks) * .6); height: calc(var(--ks) * .45); }
 .face.epm .bt.mute { background: #C8372D; }
+/* Mackie mutes: round black buttons with a red ring */
+.face.mackie .bt.mute { width: calc(var(--ks) * .85); height: auto; aspect-ratio: 1; border-radius: 50%; background: #111; box-shadow: 0 0 0 2px #C8372D; }
 .face .bt.on { background: #FFB347; box-shadow: 0 0 0 2px #FF9433, 0 0 8px 2px rgba(255, 148, 51, .9); }
 .face .bt.mute.on { background: #FF3B30; box-shadow: 0 0 0 2px #FF3B30, 0 0 8px 2px rgba(255, 59, 48, .9); }
 .face .led { flex: none; width: calc(var(--ks) * .22); aspect-ratio: 1; border-radius: 50%; background: #5A1410; }
@@ -294,10 +296,13 @@ body.editing .pcard { cursor: grab; touch-action: none; }
 .face .meter { align-self: stretch; width: calc(var(--ks) * .6); background:
   linear-gradient(90deg, transparent 0 15%, rgba(0, 0, 0, 0) 15%), repeating-linear-gradient(#0000 0 3px, #000 3px 5px),
   linear-gradient(#E53935 0 15%, #FFA000 15% 35%, #43A047 35%); border-radius: 2px; opacity: .8; }
-.face .geq { align-self: stretch; flex: 1; display: flex; justify-content: space-around; padding: 2px 4px; border: 1px solid #555; border-radius: 3px; }
-.face .geq .band { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; }
-.face .geq .fd { --cw: clamp(8px, calc(var(--u) * .22), 18px); flex: 1; height: auto; min-height: 40px; }
-.face .geq small { font-size: clamp(7px, calc(var(--u) * .1), 10px); color: var(--lab); }
+.face .fbtns { align-self: end; display: flex; flex-direction: column; align-items: center; gap: 2px; padding-bottom: calc(var(--ks) * .3); }
+.face .fbtns small, .face .fxbox small { font: 700 clamp(6px, calc(var(--u) * .11), 10px)/1 var(--f-body); color: var(--lab); margin-bottom: 3px; }
+.face.mackie .strip .fd { --cw: clamp(11px, calc(var(--u) * .36), 30px); }
+.face .jack.mini { width: clamp(6px, calc(var(--u) * .12), 11px); border-width: 1px; }
+.face .led.pw.on { background: #6BFF6B; box-shadow: 0 0 5px #6BFF6B; }
+.face.mackie .logo { color: #fff; background: none; font-size: clamp(9px, calc(var(--u) * .24), 22px); letter-spacing: 0; }
+.face.mackie .plabel.big { align-self: end; color: #39B54A; font: 800 clamp(10px, calc(var(--u) * .26), 26px)/1 var(--f-display); }
 .face .fxbox { align-self: stretch; flex: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: calc(var(--ks) * .25);
   padding: 4px; border: 2px solid #39B54A; border-radius: 4px; }
 .face .led7 { font: 700 clamp(13px, calc(var(--u) * .3), 24px)/1 ui-monospace, Menlo, monospace; color: #6BFF6B; background: #071407; padding: 3px 4px; border-radius: 2px; letter-spacing: 1px; }
@@ -342,7 +347,7 @@ body.editing .pcard { cursor: grab; touch-action: none; }
   .mp-face.mackie { break-before: page; }
   .mp-face h4 { font: 800 14pt var(--f-display); text-transform: uppercase; margin: 0 0 6px; }
   .mp-face .face { max-width: none; margin: 0 auto; }
-  .mp-face.mackie .face { max-width: 6.6in; }
+  .mp-face.mackie .face { max-width: 7.5in; }
   .mp-sheet { break-before: page; }
   .mp-sheet .print-title { margin-bottom: 4px; }
   .mp-sheet h4 { font: 800 13pt var(--f-display); text-transform: uppercase; margin: 12px 0 4px; }
@@ -364,8 +369,6 @@ body.editing .pcard { cursor: grab; touch-action: none; }
   .mp-l { font-weight: 700; }
   .mp-v { min-height: 1.1em; }
   .mp-blank { width: .45in; height: .3in; border-bottom: 1px solid #999; }
-  .mp-geq { display: grid; gap: 2px; justify-items: start; }
-  .mp-geq-row { display: flex; gap: 4px; }
   .mp-info { flex: 1 1 100%; }
   .mp-info p { margin: 1px 0; }
   #mix-print *, .flow * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -392,7 +395,6 @@ dialog.sheet.knob-sheet { width: min(1040px, calc(100vw - 24px)); }
 .kdial svg { display: block; width: 100%; height: 100%; }
 .kdial:focus-visible, .ftrack:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .kb-faders { display: flex; gap: 10px; flex: none; }
-.kb-geq { display: flex; flex-wrap: wrap; gap: 6px; }
 .fcell { padding: 8px 10px 10px; }
 .ftrack { --ch: 28px; position: relative; width: 76px; height: 300px; touch-action: none; cursor: ns-resize; border-radius: 6px; }
 .ftrack::before { content: ''; position: absolute; left: calc(50% + 8px); top: calc(var(--ch) / 2); bottom: calc(var(--ch) / 2); width: 6px; margin-left: -3px;
