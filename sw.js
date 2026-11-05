@@ -2,7 +2,7 @@
 //
 // IMPORTANT: whenever any file below changes, bump VERSION (tools/bump.sh).
 // That is how phones and iPads learn there's an update to download.
-const VERSION = 'v53';
+const VERSION = 'v54';
 // The editor and the band app share this file; name the cache after the app's folder so they don't clear each other's.
 const NAME = new URL(self.registration.scope).pathname.split('/').filter(Boolean).pop() || 'sos';
 const CACHE = `${NAME}-${VERSION}`;
@@ -19,6 +19,7 @@ const ASSETS = [
   './styles.css',
   './manifest.webmanifest',
   './vendor/pdf-lib.min.js',
+  './vendor/html2canvas.min.js',
   './vendor/pdf.min.js',
   './vendor/pdf.worker.min.js',
   './icons/icon-192.png',

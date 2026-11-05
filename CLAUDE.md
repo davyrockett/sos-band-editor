@@ -178,6 +178,12 @@ the two November gigs started as copies of the Midway info (David: "same info fo
 - **Stage plot on phones** (2026-10-25, David: make it fit): no more sideways scrolling; when the plot is under 760px wide
   (container query, screen only) cards show icon, name, instrument and channels only; gear lists are a tap away (band app:
   `showPlayer()` pop-up; editor: the member editor) and on the Gear tab. Under 560px the stage is taller (10/9).
+- **Printing on iPad / phone** (2026-11-05, David couldn't print the mixer, gear or stage plot): the browser's print does
+  nothing in a Home Screen app, so on touch devices with a share sheet (`useShareSheet()`) the Print buttons (and Print list)
+  make a PDF instead (`sectionPdf()`: html2canvas `vendor/html2canvas.min.js` 1.4.1 draws a copy of the section with the
+  `@media print` rules switched on at Letter width, `pageCuts()` splits it into pages at page breaks / between rows, pdf-lib
+  joins them) and open it in the chart viewer, whose Save / Print opens the share sheet. Computers still use the browser's print.
+  html2canvas can't do `color(...)` colours (from color-mix) or sideways text, so `plainColors()` / `sidewaysText()` fix the copy.
 - **Printing** (2026-10-25, David: pages came out zoomed in): the stage plot prints at most 8.4in wide so it fits one page
   either way round (Safari ignores `@page plot { size: landscape }`); the chart viewer's Print draws each PDF page to a
   picture (`#print-pdf`, body class `print-pdf`) sized to fit the paper, instead of printing the PDF from a hidden iframe.

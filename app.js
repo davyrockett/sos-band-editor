@@ -1781,10 +1781,179 @@ $('print-set-list').addEventListener('click', () => {
   }
   box.append(ol);
   document.body.classList.add('print-list');
-  window.print();
+  if (!useShareSheet()) return window.print();
+  const made = sectionPdf(box, `SOS Band · ${s.name} · setlist`);
+  made.finally(() => document.body.classList.remove('print-list')).catch(() => {});
+  showPdf(made, `${s.name}: setlist`, `SOS Band - ${s.name} - setlist.pdf`, 'Couldn’t make the printout. Try again.');
 });
 window.addEventListener('afterprint', () => document.body.classList.remove('print-list'));
-document.querySelectorAll('[data-print]').forEach(b => b.addEventListener('click', () => window.print()));
+// Print buttons on Stage plot, Gear and Mixer. On a computer: the browser's print. On a phone or iPad the browser's
+// print does nothing in a Home Screen app (David, 2026-11-05: couldn't print them), so the section is made into a PDF
+// laid out as the printout and opened in the chart viewer, whose Save / Print opens the share sheet (Print is in it).
+document.querySelectorAll('[data-print]').forEach(b => b.addEventListener('click', () => {
+  document.body.classList.remove('print-list', 'print-pdf');
+  if (!useShareSheet()) return window.print();
+  const panel = b.closest('.panel'), s = currentShow();
+  const what = panel.querySelector('h2')?.textContent || 'Printout';
+  const title = s ? `${s.name}: ${what.toLowerCase()}` : what;
+  showPdf(sectionPdf(panel, `SOS Band · ${title}`), title, `SOS Band - ${s?.name || ''} - ${what}.pdf`, 'Couldn’t make the printout. Try again.');
+}));
+
+/* A section as a PDF, the way it prints: the page's print styles are switched on in a copy of the page
+   (html2canvas draws it), the drawing is cut into US Letter pages between rows and boxes, and pdf-lib puts it together. */
+const SHEET_W = 726, SHEET_H = 965;   // Letter minus the 12 mm margins, in CSS pixels (96 an inch)
+function printCss() {
+  const keep = m => {   // a media query, as it would be on paper SHEET_W wide
+    if (/\bprint\b/.test(m)) return !/\bnot\b/.test(m);
+    if (/screen|orientation|height|prefers-color-scheme|pointer|hover/.test(m)) return false;
+    const max = m.match(/max-width:\s*(\d+)px/), min = m.match(/min-width:\s*(\d+)px/);
+    return (!max || SHEET_W <= +max[1]) && (!min || SHEET_W >= +min[1]);
+  };
+  const walk = rules => [...rules].map(r => {
+    if (r instanceof CSSMediaRule) return keep(r.media.mediaText) ? walk(r.cssRules) : '';
+    if (r.type === 6) return '';   // @page
+    return r.cssText;
+  }).join('\n');
+  let css = 'body { margin: 0; } html, body { background: #fff; }\n';
+  for (const sh of document.styleSheets) {
+    try { if (sh.href && new URL(sh.href).origin === location.origin) css += walk(sh.cssRules); } catch {}
+  }
+  return css;
+}
+// SVG is drawn as a picture, which loses the page's styles, so each part gets its own.
+const SVG_PROPS = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'opacity',
+  'fill-opacity', 'stroke-opacity', 'font-family', 'font-size', 'font-weight', 'font-style', 'text-anchor',
+  'dominant-baseline', 'letter-spacing', 'marker-end', 'marker-start', 'display', 'visibility'];
+function inlineSvg(root) {
+  const win = root.ownerDocument.defaultView;
+  // The copy carries the on-screen size written into each picture; let the print layout size it instead.
+  root.querySelectorAll('svg').forEach(e => { if (!e.parentElement.closest('svg')) { for (const k of ['width', 'height', 'inline-size', 'block-size']) e.style.removeProperty(k); } });
+  const all = [...root.querySelectorAll('svg, svg *')].map(e => {
+    const cs = win.getComputedStyle(e), r = e.getBoundingClientRect();
+    return [e, (e.getAttribute('style') || '') + ';' + SVG_PROPS.map(k => `${k}:${cs.getPropertyValue(k)}`).join(';'), r];
+  });
+  for (const [e, st, r] of all) {
+    e.setAttribute('style', st);
+    // The size it's shown at, or the picture comes out at its own size (and cut off)
+    if (e.tagName.toLowerCase() === 'svg' && !e.parentElement.closest('svg') && r.width) { e.setAttribute('width', r.width); e.setAttribute('height', r.height); }
+  }
+}
+// Sideways writing (the tape labels under the faders) isn't drawn by html2canvas: it becomes a small turned picture.
+function sidewaysText(root) {
+  const doc = root.ownerDocument, win = doc.defaultView, NS = 'http://www.w3.org/2000/svg';
+  const g = document.createElement('canvas').getContext('2d');
+  for (const e of root.querySelectorAll('*')) {
+    const cs = win.getComputedStyle(e);
+    if (!cs.writingMode.startsWith('vertical') || e.children.length || !e.textContent.trim()) continue;
+    const r = e.getBoundingClientRect(), pt = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const w = r.width, h = r.height, room = h - pt - 2;
+    let t = e.textContent.trim();
+    g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    if (g.measureText(t).width > room) { while (t && g.measureText(t + '…').width > room) t = t.slice(0, -1); t += '…'; }
+    const svg = doc.createElementNS(NS, 'svg');
+    svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.style.display = 'block';
+    const tx = doc.createElementNS(NS, 'text');
+    // vertical-rl turned 180° reads bottom to top
+    tx.setAttribute('transform', `translate(${w / 2} ${h / 2}) rotate(${cs.transform === 'none' ? 90 : -90})`);
+    tx.setAttribute('text-anchor', 'middle'); tx.setAttribute('dominant-baseline', 'central');
+    tx.setAttribute('style', `font: ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}; fill: ${cs.color}`);
+    tx.textContent = t;
+    svg.append(tx);
+    e.style.setProperty('writing-mode', 'horizontal-tb', 'important');
+    e.style.setProperty('transform', 'none', 'important');
+    e.style.setProperty('padding', '0', 'important');
+    e.style.setProperty('width', w + 'px', 'important');
+    e.style.setProperty('height', h + 'px', 'important');
+    e.replaceChildren(svg);
+  }
+}
+// html2canvas can't read newer colour formats (color-mix() gives "color(srgb …)"), so those become rgb() first.
+const COLOR_PROPS = ['color', 'background-color', 'background-image', 'border-top-color', 'border-right-color',
+  'border-bottom-color', 'border-left-color', 'outline-color', 'text-decoration-color', 'box-shadow', 'fill', 'stroke'];
+function plainColors(root) {
+  const win = root.ownerDocument.defaultView, g = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const rgb = v => {
+    g.clearRect(0, 0, 1, 1); g.fillStyle = '#000'; g.fillStyle = v; g.fillRect(0, 0, 1, 1);
+    const [r, gr, b, a] = g.getImageData(0, 0, 1, 1).data;
+    return `rgba(${r}, ${gr}, ${b}, ${+(a / 255).toFixed(3)})`;
+  };
+  for (const e of [root, ...root.querySelectorAll('*')]) {
+    const cs = win.getComputedStyle(e);
+    for (const k of COLOR_PROPS) {
+      const v = cs.getPropertyValue(k);
+      if (/\b(color|oklch|oklab|lab|lch)\(/.test(v)) e.style.setProperty(k, v.replace(/\b(color|oklch|oklab|lab|lch)\([^()]*\)/g, rgb), 'important');
+    }
+  }
+}
+// Where to cut the pages: at forced page breaks, otherwise as low as possible where nothing gets cut in half.
+function pageCuts(root) {
+  const win = root.ownerDocument.defaultView, box = root.getBoundingClientRect(), H = box.height;
+  const atoms = [], cands = [], forced = [];
+  for (const e of root.querySelectorAll('*')) {
+    if (e.closest('svg') && e.tagName.toLowerCase() !== 'svg') continue;
+    const cs = win.getComputedStyle(e), r = e.getBoundingClientRect();
+    if (cs.display === 'none' || !r.height) continue;
+    const y0 = r.top - box.top, y1 = r.bottom - box.top;
+    if (cs.breakBefore === 'page' || cs.pageBreakBefore === 'always') forced.push(y0);
+    if (/avoid/.test(cs.breakInside) || !e.children.length || /^(tr|svg|img|canvas|p|li|h\d|button|select)$/i.test(e.tagName)) atoms.push([y0, y1]);
+    cands.push(y0, y1);
+  }
+  const whole = y => !atoms.some(([a, b]) => a < y - 1 && b > y + 1);
+  cands.sort((a, b) => a - b);
+  forced.sort((a, b) => a - b);
+  const pages = [];
+  for (let s = 0; s < H - 2;) {
+    const f = forced.find(y => y > s + 2), lim = s + SHEET_H;
+    let e;
+    if (f !== undefined && f <= lim) e = f;
+    else if (lim >= H) e = H;
+    else e = cands.filter(y => y > s + SHEET_H * .3 && y <= lim && whole(y)).pop() ?? lim;
+    pages.push([s, e]);
+    s = e;
+  }
+  return pages;
+}
+async function sectionPdf(target, title) {
+  await Promise.all([loadScript('vendor/html2canvas.min.js', 'html2canvas'), loadScript('vendor/pdf-lib.min.js', 'PDFLib')]);
+  await document.fonts?.ready;
+  const css = printCss();
+  let pages = [];
+  // Sharp enough to print (2x), but kept under the size iPad Safari allows for one picture.
+  const scale = Math.max(1, Math.min(2, Math.sqrt(14e6 / (SHEET_W * Math.max(1500, target.scrollHeight * 1.6)))));
+  const canvas = await html2canvas(target, {
+    scale, windowWidth: SHEET_W, scrollX: 0, scrollY: 0, backgroundColor: '#fff', logging: false,
+    onclone: (doc, el) => {
+      doc.querySelectorAll('link[rel="stylesheet"]').forEach(l => { if (new URL(l.href, location.href).origin === location.origin) l.remove(); });
+      doc.head.append(Object.assign(doc.createElement('style'), { textContent: css }));
+      doc.documentElement.dataset.theme = 'light';
+      doc.body.classList.remove('viewing');
+      el.style.setProperty('background', '#fff', 'important');
+      plainColors(el);
+      sidewaysText(el);
+      inlineSvg(el);
+      pages = pageCuts(el);
+    },
+  });
+  const k = scale;
+  const pdf = await PDFLib.PDFDocument.create();
+  pdf.setTitle(title);
+  const PT = 72 / 96, M = 34;   // points per CSS pixel; 12 mm margin
+  for (const [a, b] of pages) {
+    const h = Math.round((b - a) * k);
+    if (h < 2) continue;
+    const c = document.createElement('canvas');
+    c.width = canvas.width; c.height = h;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, h);
+    g.drawImage(canvas, 0, Math.round(a * k), canvas.width, h, 0, 0, canvas.width, h);
+    const png = await pdf.embedPng(await (await new Promise(ok => c.toBlob(ok, 'image/png'))).arrayBuffer());
+    const page = pdf.addPage([612, 792]);
+    const w = canvas.width / k * PT;
+    page.drawImage(png, { x: M + (544 - Math.min(w, 544)) / 2, y: 792 - M - (b - a) * PT * Math.min(1, 544 / w), width: Math.min(w, 544), height: (b - a) * PT * Math.min(1, 544 / w) });
+  }
+  return new Blob([await pdf.save()], { type: 'application/pdf' });
+}
 
 /* ---------- Member dialog ---------- */
 let memberId = null;
