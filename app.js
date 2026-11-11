@@ -2120,6 +2120,7 @@ function metSchedule() {
   // missed instead of playing them all at once, which put the high click on beat 2 or 3 (David, 2026-10-25).
   if (!metOn) return;
   metClock();
+  metShow();
   while (metNext < metNow()) {
     metNext += 60 / met.bpm;
     metBeat = (metBeat + 1) % met.beats;
@@ -2131,19 +2132,30 @@ function metSchedule() {
     metBeat = (metBeat + 1) % met.beats;
   }
 }
-function metDraw() {
+// Shows the beats that have come due. Called on every screen frame AND from the scheduling timer, so the
+// flashes don't stop when the screen frames do (a busy or power-saving iPad); and when several beats come
+// due at once, a beat 1 among them still flashes if it is no more than 0.2 s old.
+function metShow() {
   if (!metOn) return;
-  let hit = null;
-  while (metQueue.length && metQueue[0].t <= metNow()) hit = metQueue.shift();
+  const now = metNow();
+  let hit = null, one = false;
+  while (metQueue.length && metQueue[0].t <= now) {
+    hit = metQueue.shift();
+    if (hit.beat === 0 && now - hit.t < 0.2) one = true;
+  }
   if (hit) {
     // Only beat 1 of each bar flashes (David); the beat lights still step every beat.
-    if (hit.beat === 0) for (const box of [$('met-box'), $('pf-met')]) {
+    if (one) for (const box of [$('met-box'), $('pf-met')]) {
       box.classList.remove('flash', 'flash1');
       void box.offsetWidth;   // restart the flash animation
       box.classList.add('flash1');
     }
     document.querySelectorAll('#met-dots i, #pf-dots i').forEach(d => d.classList.toggle('on', d.dataset.n == hit.beat));
   }
+}
+function metDraw() {
+  if (!metOn) return;
+  metShow();
   requestAnimationFrame(metDraw);
 }
 // The beats run on the sound card's clock when it is working, otherwise on the page's own clock (flashes only).
@@ -2185,6 +2197,8 @@ function metClock() {
   if (metAudio && !alive) {
     // The sound went to sleep or froze while running (a call, Siri…): keep flashing on the page's clock.
     metAudio = false;
+    // Beats already shown stay counted; the ones still waiting are counted again on the page's clock.
+    if (metQueue.length) metBeat = metQueue[0].beat;
     metQueue = [];
     metNext = metNow() + 0.05;
     try { metCtx?.resume().catch(() => {}); } catch {}   // it may come back by itself; then the clicks do too
