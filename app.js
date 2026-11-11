@@ -2096,6 +2096,9 @@ const BPM_MIN = 30, BPM_MAX = 260;
 const cleanBpm = v => { const n = Math.round(Number(v)); return n >= BPM_MIN && n <= BPM_MAX ? n : null; };
 const met = Object.assign({ bpm: 120, beats: 4, silent: true, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
 let metCtx = null, metOn = false, metNext = 0, metBeat = 0, metTimer = null, metQueue = [], metLock = null, metAudio = false, metRun = 0;
+let metTickT = -1, metTickAt = 0;   // the sound clock's last reading, and when it last moved (see metAudioAlive)
+// Is the metronome meant to make sound right now? Perform's little one has its own Silent switch (on each time Perform opens).
+const metSilent = () => ($('perform').hidden ? met.silent : pf.silent);
 const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song }));
 // The songs in this gig's set, in order (breaks and notes left out).
 const metSongs = s => (s?.setlist || []).filter(id => !isBreak(id) && !isNote(id) && get(id)).map(get);
@@ -2116,13 +2119,13 @@ function metSchedule() {
   // If the page was too busy to schedule in time (an iPad drawing a chart in Perform), skip the beats already
   // missed instead of playing them all at once, which put the high click on beat 2 or 3 (David, 2026-10-25).
   if (!metOn) return;
+  metClock();
   while (metNext < metNow()) {
     metNext += 60 / met.bpm;
     metBeat = (metBeat + 1) % met.beats;
   }
   while (metNext < metNow() + 0.12) {
-    // Perform's little metronome has its own Silent switch (on each time Perform opens).
-    if (metAudio && !($('perform').hidden ? met.silent : pf.silent)) metClick(metNext, metBeat === 0 && met.beats > 1);
+    if (metAudio && !metSilent()) metClick(metNext, metBeat === 0 && met.beats > 1);
     metQueue.push({ t: metNext, beat: metBeat });
     metNext += 60 / met.bpm;
     metBeat = (metBeat + 1) % met.beats;
@@ -2147,19 +2150,21 @@ function metDraw() {
 const metNow = () => (metAudio ? metCtx.currentTime : performance.now() / 1000);
 // iPad Safari puts the sound to sleep ("interrupted") after the screen locks, another app plays, etc., and
 // waking it up again can hang for ever: Start then gave no sound AND no flashing (David, rehearsal 2026-10-26).
-// So every Start that finds it asleep makes a fresh one, right there in the tap, and never waits on it.
+// It can also say "running" while its clock stands still or nothing comes out (after the app was in the
+// background, a Bluetooth speaker dropping…); Start then trusted it and gave no sound and no flash again
+// (David, 2026-11-11: "sometimes not functioning").
+// So EVERY Start makes a fresh one, right there in the tap, and never waits on it.
 function metAudioUp() {
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}   // play even when the iPad is muted
-  if (metCtx?.state !== 'running') {
-    try { metCtx?.close().catch(() => {}); } catch {}
-    metCtx = null;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      ctx.addEventListener('statechange', () => { if (ctx === metCtx) metAudioLost(); });
-      metCtx = ctx;
-    } catch { return; }
-  }
-  metCtx.resume().catch(() => {});
+  try { metCtx?.close().catch(() => {}); } catch {}
+  metCtx = null;
+  metTickT = -1;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.addEventListener('statechange', () => { if (ctx === metCtx && metOn && metTimer) metClock(); });
+    metCtx = ctx;
+  } catch { return; }
+  try { metCtx.resume().catch(() => {}); } catch {}
   try {   // a silent blip, played in the tap, is what lets iPad Safari make sound
     const b = metCtx.createBufferSource();
     b.buffer = metCtx.createBuffer(1, 1, metCtx.sampleRate);
@@ -2167,13 +2172,43 @@ function metAudioUp() {
     b.start();
   } catch {}
 }
-// The sound went to sleep while running (a call, Siri…): keep flashing on the page's clock.
-function metAudioLost() {
-  if (!metOn || !metAudio || metCtx?.state === 'running') return;
-  metAudio = false;
-  metQueue = [];
-  metNext = metNow() + 0.05;
-  toast('The sound stopped. Tap Stop, then Start, to bring it back.');
+// Is the sound card's clock really ticking? "running" is not enough: it must have moved in the last 0.4 s.
+function metAudioAlive() {
+  if (metCtx?.state !== 'running') return false;
+  const t = metCtx.currentTime, now = performance.now();
+  if (t !== metTickT) { metTickT = t; metTickAt = now; }
+  return t > 0 && now - metTickAt < 400;
+}
+// Keeps the beats on whichever clock is working, checked every time beats are scheduled.
+function metClock() {
+  const alive = metAudioAlive();
+  if (metAudio && !alive) {
+    // The sound went to sleep or froze while running (a call, Siri…): keep flashing on the page's clock.
+    metAudio = false;
+    metQueue = [];
+    metNext = metNow() + 0.05;
+    try { metCtx?.resume().catch(() => {}); } catch {}   // it may come back by itself; then the clicks do too
+    if (!metSilent()) toast('The sound stopped. Tap Stop, then Start, to bring it back.');
+  } else if (!metAudio && alive) {
+    // The sound woke up late (a slow Bluetooth speaker) or came back: move over to its clock, keeping the beat.
+    const shift = metCtx.currentTime - performance.now() / 1000;
+    metAudio = true;
+    metNext += shift;
+    metQueue.forEach(q => { q.t += shift; });
+  }
+}
+// Say so only when sound is wanted and has had a good second to turn up.
+function metSoundCheck() {
+  const run = metRun;
+  setTimeout(() => {
+    if (metOn && run === metRun && !metAudio && !metSilent()) toast('No sound on this device just now, so it is flashing only. Tap Stop, then Start, to try again.');
+  }, 1500);
+}
+// Sound switched on while it runs without sound: try for the sound again, in that tap.
+function metSoundOn() {
+  if (!metOn || metAudio || metSilent()) return;
+  metAudioUp();
+  metSoundCheck();
 }
 function metStart() {
   metAudioUp();
@@ -2182,14 +2217,15 @@ function metStart() {
   metOn = true;   // straight away, so the button shows Stop and a second tap stops it
   metMarks();
   try { navigator.wakeLock?.request('screen').then(l => { if (metOn && run === metRun) metLock = l; else l.release(); }).catch(() => {}); } catch {}   // keep the screen on while it runs
-  // Give the sound a moment to wake up; if it doesn't, the flashes still start on time.
+  // Give the sound a moment to wake up; if it doesn't, the flashes still start on time
+  // and the clicks join in when it does (metClock).
   const t0 = performance.now();
   (function go() {
     if (!metOn || run !== metRun) return;
-    const ready = metCtx?.state === 'running' && metCtx.currentTime > 0;
+    const ready = metAudioAlive();
     if (!ready && performance.now() - t0 < 300) { setTimeout(go, 15); return; }
     metAudio = ready;
-    if (!ready) toast('No sound on this device just now, so it is flashing only. Tap Stop, then Start, to try again.');
+    if (!ready) metSoundCheck();
     metBeat = 0;
     metQueue = [];
     metNext = metNow() + 0.08;
@@ -2306,7 +2342,7 @@ $('met-plus').addEventListener('click', () => setBpm(met.bpm + 1));
 $('met-slider').addEventListener('input', e => setBpm(Number(e.target.value)));
 $('met-prev').addEventListener('click', () => stepSong(-1));
 $('met-next').addEventListener('click', () => stepSong(1));
-document.querySelectorAll('#met-mode button').forEach(b => b.addEventListener('click', () => { met.silent = b.dataset.silent === '1'; saveMet(); metMarks(); }));
+document.querySelectorAll('#met-mode button').forEach(b => b.addEventListener('click', () => { met.silent = b.dataset.silent === '1'; saveMet(); metMarks(); metSoundOn(); }));
 document.querySelectorAll('#met-beats button').forEach(b => b.addEventListener('click', () => {
   met.beats = Number(b.dataset.beats);
   metBeat = 0;
@@ -2505,7 +2541,7 @@ $('pf-met-open').addEventListener('click', () => { metMarks(); $('pf-met').hidde
 $('pf-met-close').addEventListener('click', () => { $('pf-met').hidden = true; if (metOn) metStop(); });
 $('pf-minus').addEventListener('click', () => setBpm(met.bpm - 1));
 $('pf-plus').addEventListener('click', () => setBpm(met.bpm + 1));
-$('pf-silent').addEventListener('click', () => { pf.silent = !pf.silent; metMarks(); });
+$('pf-silent').addEventListener('click', () => { pf.silent = !pf.silent; metMarks(); metSoundOn(); });
 $('pf-start').addEventListener('click', () => (metOn ? metStop() : metStart()));
 tapTempo($('pf-tap'), setBpm);
 
