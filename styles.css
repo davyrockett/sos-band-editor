@@ -506,6 +506,8 @@ dialog.sheet::backdrop { background: rgba(20,18,16,.5); }
 .shows button { width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; padding: 10px 4px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
 .shows button[aria-current="true"] { font-weight: 700; color: var(--accent-ink); }
 .shows .d { color: var(--muted); font-weight: 400; }
+.sheet label.check { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 14px; }
+.sheet label.check input { width: 22px; height: 22px; accent-color: var(--accent, #F57C14); flex: none; }
 .show-form { border-top: 2px solid var(--line); padding-top: 14px; margin-top: 8px; }
 .set-block { padding: 12px 0; border-top: 1px solid var(--line); }
 .set-block:first-of-type { border-top: 0; }

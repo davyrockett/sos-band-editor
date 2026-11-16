@@ -104,6 +104,10 @@ function patchShow(fn) {
 }
 
 const canEdit = () => EDITOR;
+// A rehearsal (David, 2026-11-16) is a gig where anyone can pick any song, not just the set: the band app shows
+// All songs, and Perform and the metronome list the set first, then every other song A–Z.
+// Ticked in the Gigs dialog (show.rehearsal); a gig with "rehearsal" in its name counts until it's set either way.
+const isRehearsal = s => Boolean(s && (s.rehearsal ?? /rehears/i.test(s.name || '')));
 
 /* ---------- Tabs ---------- */
 let tab = lsGet(K.tab) || 'set';
@@ -176,6 +180,9 @@ function render() {
   document.title = s ? `SOS Band · ${s.name}` : 'SOS Band';
   $('show-name').textContent = s ? s.name : (Object.keys(items).length ? 'No gig yet' : 'Loading…');
   $('show-date').textContent = s ? [fmtDate(s.date, false), fmtLength(s.length)].filter(Boolean).join(' · ') : '';
+  const reh = isRehearsal(s);
+  document.querySelectorAll('.lib-bit').forEach(x => { x.hidden = !(EDITOR || reh); });
+  $('lib-rehearsal').hidden = !reh;
   renderSet(s); renderMet(s); renderPlot(s, b); renderGear(s); renderMixers(s); renderBand(s);
 }
 
@@ -204,7 +211,7 @@ function renderSet(s) {
   const ids = (s?.setlist || []).filter(inSet);
   const nSongs = ids.filter(id => !isBreak(id) && !isNote(id)).length;
   const nSets = ids.filter(isBreak).length + 1;
-  $('set-count').textContent = s ? `${nSongs} song${nSongs === 1 ? '' : 's'}${nSets > 1 ? ` in ${nSets} sets` : ''} · ${s.name}${s.length ? ` · ${fmtLength(s.length)} gig` : ''}` : '';
+  $('set-count').textContent = s ? `${nSongs} song${nSongs === 1 ? '' : 's'}${nSets > 1 ? ` in ${nSets} sets` : ''} · ${s.name}${s.length ? ` · ${fmtLength(s.length)} gig` : ''}${isRehearsal(s) ? ' · rehearsal: any song' : ''}` : '';
   $('set-empty').hidden = ids.length > 0;
   wrap.hidden = !ids.length;
   $('print-set-charts').disabled = !nSongs;
@@ -2023,7 +2030,7 @@ function openShows() {
     const b = el('button');
     b.type = 'button';
     b.setAttribute('aria-current', s.id === cur?.id);
-    b.append(el('span', null, s.name + (EDITOR && s.id === band().currentShow ? ' ★' : '')), el('span', 'd', [fmtDate(s.date, false), fmtLength(s.length)].filter(Boolean).join(' · ')));
+    b.append(el('span', null, s.name + (EDITOR && s.id === band().currentShow ? ' ★' : '')), el('span', 'd', [fmtDate(s.date, false), fmtLength(s.length), isRehearsal(s) && !/rehears/i.test(s.name) && 'rehearsal'].filter(Boolean).join(' · ')));
     b.addEventListener('click', () => { lsSet(K.show, s.id); render(); openShows(); keepChartsOffline(); });
     li.append(b);
     ul.append(li);
@@ -2034,6 +2041,7 @@ function openShows() {
     $('sh-venue').value = cur.venue || '';
     $('sh-host').value = cur.host || '';
     $('sh-length').value = cur.length || '';
+    $('sh-rehearsal').checked = isRehearsal(cur);
   }
   $('sh-band').disabled = !cur || cur.id === band().currentShow;
   $('sh-band').textContent = cur && cur.id === band().currentShow ? '★ The band app opens on this gig' : '★ Make the band app open on this gig';
@@ -2054,17 +2062,38 @@ $('show-form').addEventListener('submit', e => {
   e.preventDefault();
   patchShow(v => { v.name = $('sh-name').value.trim() || v.name; v.date = $('sh-date').value; v.venue = $('sh-venue').value.trim(); v.host = $('sh-host').value.trim();
     const len = Math.round(Number($('sh-length').value));
-    v.length = len > 0 ? Math.min(len, 600) : 0; });
+    v.length = len > 0 ? Math.min(len, 600) : 0;
+    v.rehearsal = $('sh-rehearsal').checked; });
   openShows();
   toast('Gig saved.');
+});
+// Rehearsal: saved as soon as it's ticked. Typing a name with "rehearsal" in it ticks it (saved with Save).
+$('sh-rehearsal').addEventListener('change', e => {
+  patchShow(v => { v.rehearsal = e.target.checked; });
+  toast(e.target.checked ? 'Rehearsal: anyone can pick any song.' : 'Back to just the set.');
+});
+$('sh-name').addEventListener('input', e => { if (/rehears/i.test(e.target.value)) $('sh-rehearsal').checked = true; });
+// A new rehearsal starts as a copy of this gig (same band, stage plot, mixer and set), with any song pickable.
+$('sh-rehearse').addEventListener('click', () => {
+  const cur = currentShow();
+  if (!cur) return;
+  const id = uid('show');
+  const { id: _x, updatedAt, ...copy } = structuredClone(cur);
+  put(id, { ...copy, name: `Rehearsal for ${cur.name}`.replace(/^Rehearsal for Rehearsal for /, 'Rehearsal for '), date: '', length: 0, rehearsal: true });
+  lsSet(K.show, id);
+  render();
+  openShows();
+  $('sh-date').focus();
+  toast('New rehearsal: same band, stage plot and set, and any song can be picked. Give it a date.');
 });
 $('sh-copy').addEventListener('click', () => {
   const cur = currentShow();
   if (!cur) return;
   const id = uid('show');
   const { id: _x, updatedAt, ...copy } = structuredClone(cur);
-  put(id, { ...copy, name: 'New show', date: '' });
+  put(id, { ...copy, name: 'New show', date: '', rehearsal: false });
   lsSet(K.show, id);
+  render();
   openShows();
   $('sh-name').focus();
   $('sh-name').select();
@@ -2091,7 +2120,7 @@ document.querySelectorAll('dialog').forEach(d => {
    Clicks are scheduled ahead on the Web Audio clock so they stay steady; the flashing follows the same clock.
    Silent mode schedules no sound, only the flashes. Tempos are saved on each song (song.bpm). */
 // Perform's state (see Perform below); here because the metronome reads its Silent switch.
-const pf = { silent: true, songs: [], i: 0, page: 1, docs: new Map(), cache: new Map(), lock: null, token: 0, barTimer: null };
+const pf = { silent: true, songs: [], nSet: 0, i: 0, page: 1, docs: new Map(), cache: new Map(), lock: null, token: 0, barTimer: null };
 const BPM_MIN = 30, BPM_MAX = 260;
 const cleanBpm = v => { const n = Math.round(Number(v)); return n >= BPM_MIN && n <= BPM_MAX ? n : null; };
 const met = Object.assign({ bpm: 120, beats: 4, silent: true, song: null }, (() => { try { return JSON.parse(lsGet(K.met)) || {}; } catch { return {}; } })());
@@ -2102,6 +2131,13 @@ const metSilent = () => ($('perform').hidden ? met.silent : pf.silent);
 const saveMet = () => lsSet(K.met, JSON.stringify({ bpm: met.bpm, beats: met.beats, silent: met.silent, song: met.song }));
 // The songs in this gig's set, in order (breaks and notes left out).
 const metSongs = s => (s?.setlist || []).filter(id => !isBreak(id) && !isNote(id) && get(id)).map(get);
+// The songs you can step through: the set, and at a rehearsal every other song after it (A–Z).
+function gigSongs(s) {
+  const set = metSongs(s);
+  if (!isRehearsal(s)) return set;
+  const ids = new Set(set.map(x => x.id));
+  return [...set, ...songs().filter(x => !ids.has(x.id))];
+}
 
 function metClick(t, accent) {
   const o = metCtx.createOscillator(), g = metCtx.createGain();
@@ -2282,14 +2318,14 @@ function metMarks() {
   document.querySelectorAll('#met-beats button').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.beats) === met.beats));
   for (const dots of [$('met-dots'), $('pf-dots')])
     if (dots.children.length !== met.beats) dots.replaceChildren(...Array.from({ length: met.beats }, (_, n) => { const d = el('i'); d.dataset.n = n; return d; }));
-  const list = metSongs(currentShow());
+  const show = currentShow(), list = gigSongs(show), nSet = metSongs(show).length;
   const i = list.findIndex(x => x.id === met.song);
   const song = list[i];
-  $('met-song').textContent = song ? `${i + 1}. ${song.title}` : 'No song picked';
+  $('met-song').textContent = song ? (i < nSet ? `${i + 1}. ${song.title}` : song.title) : 'No song picked';
   $('met-song').classList.toggle('none', !song);
   $('met-prev').disabled = !list.length || i === 0;
   $('met-next').disabled = !list.length || i === list.length - 1;
-  document.querySelectorAll('#met-list li[data-id]').forEach(li => li.classList.toggle('cur', li.dataset.id === met.song));
+  document.querySelectorAll('#met-list li[data-id], #met-more-list li[data-id]').forEach(li => li.classList.toggle('cur', li.dataset.id === met.song));
 }
 function pickSong(id) {
   const song = get(id);
@@ -2298,7 +2334,7 @@ function pickSong(id) {
   if (song.bpm) setBpm(song.bpm); else { saveMet(); metMarks(); }
 }
 function stepSong(d) {
-  const list = metSongs(currentShow());
+  const list = gigSongs(currentShow());
   const i = list.findIndex(x => x.id === met.song);
   const next = list[i < 0 ? 0 : i + d];
   if (next) pickSong(next.id);
@@ -2315,40 +2351,49 @@ function renderMet(s) {
       list = el('ol', 'setlist met-songs');
       return;
     }
-    const song = get(id);
-    const li = el('li');
-    li.dataset.id = id;
-    li.append(el('span', 'num', ++n));
-    const btn = el('button', 'song-btn');
-    btn.type = 'button';
-    const txt = el('span', 'song-txt');
-    txt.append(el('span', 'song-title', song.title), el('span', 'song-artist', song.artist || ''));
-    btn.append(txt);
-    btn.addEventListener('click', () => pickSong(id));
-    li.append(btn);
-    if (canEdit()) {
-      const inp = el('input', 'bpm-input');
-      inp.type = 'number';
-      inp.inputMode = 'numeric';
-      inp.min = BPM_MIN; inp.max = BPM_MAX;
-      inp.placeholder = 'BPM';
-      inp.value = song.bpm || '';
-      inp.setAttribute('aria-label', `Tempo of ${song.title}`);
-      inp.addEventListener('change', () => {
-        const bpm = cleanBpm(inp.value);
-        if (inp.value && !bpm) { inp.value = song.bpm || ''; toast(`Tempos go from ${BPM_MIN} to ${BPM_MAX} BPM.`); return; }
-        put(id, { ...get(id), bpm });
-        if (met.song === id && bpm) setBpm(bpm);
-      });
-      li.append(inp);
-    } else {
-      li.append(el('span', 'bpm-tag' + (song.bpm ? '' : ' none'), song.bpm ? `${song.bpm}` : '—'));
-    }
-    list.append(li);
+    list.append(metRow(id, ++n));
   });
   if (list.children.length) wrap.append(list);
   wrap.classList.toggle('multi', wrap.children.length > 1);
+  // At a rehearsal every other song is here too, A–Z, so its tempo can be loaded (and typed in).
+  const more = isRehearsal(s) ? gigSongs(s).slice(metSongs(s).length) : [];
+  $('met-more').hidden = !more.length;
+  $('met-more-list').replaceChildren(...more.map(x => metRow(x.id, '')));
+  if (more.length) $('met-empty').hidden = true;
   metMarks();
+}
+// One song in the metronome's lists: tap to load its tempo; the editor types tempos here.
+function metRow(id, num) {
+  const song = get(id);
+  const li = el('li');
+  li.dataset.id = id;
+  li.append(el('span', 'num', num));
+  const btn = el('button', 'song-btn');
+  btn.type = 'button';
+  const txt = el('span', 'song-txt');
+  txt.append(el('span', 'song-title', song.title), el('span', 'song-artist', song.artist || ''));
+  btn.append(txt);
+  btn.addEventListener('click', () => pickSong(id));
+  li.append(btn);
+  if (canEdit()) {
+    const inp = el('input', 'bpm-input');
+    inp.type = 'number';
+    inp.inputMode = 'numeric';
+    inp.min = BPM_MIN; inp.max = BPM_MAX;
+    inp.placeholder = 'BPM';
+    inp.value = song.bpm || '';
+    inp.setAttribute('aria-label', `Tempo of ${song.title}`);
+    inp.addEventListener('change', () => {
+      const bpm = cleanBpm(inp.value);
+      if (inp.value && !bpm) { inp.value = song.bpm || ''; toast(`Tempos go from ${BPM_MIN} to ${BPM_MAX} BPM.`); return; }
+      put(id, { ...get(id), bpm });
+      if (met.song === id && bpm) setBpm(bpm);
+    });
+    li.append(inp);
+  } else {
+    li.append(el('span', 'bpm-tag' + (song.bpm ? '' : ' none'), song.bpm ? `${song.bpm}` : '—'));
+  }
+  return li;
 }
 $('met-start').addEventListener('click', () => (metOn ? metStop() : metStart()));
 $('met-minus').addEventListener('click', () => setBpm(met.bpm - 1));
@@ -2452,14 +2497,14 @@ async function pfShow() {
     msg.replaceChildren(el('b', null, song.title), el('span', null, [song.key && `Key ${song.key}`, song.bpm && `${song.bpm} BPM`].filter(Boolean).join(' · ')),
       el('span', 'pf-dim', doc ? 'Couldn’t load this chart. Check the connection.' : 'No chart for this song.'));
     msg.hidden = false;
-    $('pf-count').textContent = `Song ${pf.i + 1} of ${pf.songs.length}`;
+    $('pf-count').textContent = pfWhere();
     return;
   }
   if (pf.page < 1 || pf.page > doc.numPages) pf.page = pf.page < 1 ? doc.numPages : 1;   // -1 = its last page
   const step = pfTwo() ? 2 : 1;
   if (step === 2) pf.page -= (pf.page - 1) % 2;   // two at a time: 1–2, 3–4, …
   const last = Math.min(pf.page + step - 1, doc.numPages);
-  $('pf-count').textContent = `Song ${pf.i + 1} of ${pf.songs.length} · page ${pf.page === last ? pf.page : `${pf.page}–${last}`} of ${doc.numPages}`;
+  $('pf-count').textContent = `${pfWhere()} · page ${pf.page === last ? pf.page : `${pf.page}–${last}`} of ${doc.numPages}`;
   try {
     const cs = await Promise.all(Array.from({ length: last - pf.page + 1 }, (_, n) => pfDraw(doc, pf.page + n, song.id)));
     if (t !== pf.token) return;
@@ -2473,16 +2518,18 @@ async function pfShow() {
     if (d && d !== 'failed') for (let n = 1; n <= Math.min(step, d.numPages); n++) pfDraw(d, n, nextSong.id).catch(() => {});
   }).catch(() => {});
 }
+// "Song 3 of 12" in the set; a rehearsal's other songs just say so.
+const pfWhere = () => (pf.i < pf.nSet ? `Song ${pf.i + 1} of ${pf.nSet}` : 'Not in the set');
 async function pfStep(d) {
   const doc = await pfDoc(pf.songs[pf.i]);
   const pages = doc && doc !== 'failed' ? doc.numPages : 1, step = pfTwo() ? 2 : 1;
   if (d > 0) {
     if (pf.page + step <= pages) pf.page += step;
-    else if (pf.i < pf.songs.length - 1) { pf.i++; pf.page = 1; }
-    else { toast('That’s the end of the set.'); return; }
+    else if (pf.i < pf.songs.length - 1 && pf.i !== pf.nSet - 1) { pf.i++; pf.page = 1; }
+    else { toast(pf.i === pf.nSet - 1 ? 'That’s the end of the set.' : 'That’s the last song.'); return; }
   } else {
     if (pf.page > 1) pf.page = Math.max(1, pf.page - step);
-    else if (pf.i > 0) { pf.i--; pf.page = -1; }
+    else if (pf.i > 0 && pf.i !== pf.nSet) { pf.i--; pf.page = -1; }
     else return;
   }
   pfShow();
@@ -2495,10 +2542,18 @@ async function pfWake() {
   try { pf.lock = await navigator.wakeLock?.request('screen'); } catch {}
 }
 function openPerform() {
-  pf.songs = metSongs(currentShow());
+  const show = currentShow();
+  pf.songs = gigSongs(show);
+  pf.nSet = metSongs(show).length;
   if (!pf.songs.length) { toast('No songs in this set yet.'); return; }
+  // At a rehearsal the picker has the set, then every other song A–Z.
+  const opt = (x, n) => new Option(`${n < pf.nSet ? `${n + 1}. ` : ''}${x.title}${x.bpm ? ` · ${x.bpm}` : ''}`, x.id);
   const sel = $('pf-song');
-  sel.replaceChildren(...pf.songs.map((x, n) => new Option(`${n + 1}. ${x.title}${x.bpm ? ` · ${x.bpm}` : ''}`, x.id)));
+  if (pf.nSet === pf.songs.length) sel.replaceChildren(...pf.songs.map(opt));
+  else {
+    const group = (label, list, from) => { const g = document.createElement('optgroup'); g.label = label; g.append(...list.map((x, n) => opt(x, n + from))); return g; };
+    sel.replaceChildren(...[pf.nSet && group('This set', pf.songs.slice(0, pf.nSet), 0), group(pf.nSet ? 'Other songs' : 'All songs', pf.songs.slice(pf.nSet), pf.nSet)].filter(Boolean));
+  }
   pf.i = 0; pf.page = 1; pfForget();
   pf.silent = true;   // on stage the little metronome starts silent (David)
   const v = $('perform');

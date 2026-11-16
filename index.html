@@ -92,12 +92,13 @@ applyTheme(savedTheme());
     <p class="empty" id="set-empty" hidden>No songs in this set yet.</p>
     <div class="edit-only add-row row-btns"><button type="button" class="btn small" id="break-add">+ Break</button><button type="button" class="btn small" id="note-add">+ Note</button></div>
 
-    <div class="lib-head editor-only">
+    <div class="lib-head lib-bit">
       <h3>All songs</h3>
       <button type="button" class="btn edit-only" id="song-new">+ New song</button>
     </div>
-    <input type="search" class="search editor-only" id="song-search" placeholder="Search songs" aria-label="Search songs">
-    <ul class="library editor-only" id="library"></ul>
+    <input type="search" class="search lib-bit" id="song-search" placeholder="Search songs" aria-label="Search songs">
+    <p class="hint lib-bit" id="lib-rehearsal" hidden>Rehearsal: tap any song for its chart, or pick any song in Perform.</p>
+    <ul class="library lib-bit" id="library"></ul>
   </section>
 
   <!-- METRONOME -->
@@ -140,6 +141,10 @@ applyTheme(savedTheme());
     <p class="cap edit-only">Type each song's tempo. It's saved with the song, so it shows in every gig and in the band app.</p>
     <div class="setcols" id="met-list"></div>
     <p class="empty" id="met-empty" hidden>No songs in this set yet.</p>
+    <div id="met-more" hidden>
+      <h3 class="met-list-h">Other songs</h3>
+      <ol class="setlist met-songs met-more" id="met-more-list"></ol>
+    </div>
   </section>
 
   <!-- STAGE PLOT -->
@@ -348,11 +353,13 @@ applyTheme(savedTheme());
         <label>Presented by <input id="sh-host" placeholder="e.g. Resounding Joy"></label>
         <label>Length (minutes) <input type="number" id="sh-length" inputmode="numeric" min="1" max="600" placeholder="e.g. 90"></label>
       </div>
+      <label class="check"><input type="checkbox" id="sh-rehearsal"> Rehearsal: anyone can pick any song, not just the set</label>
       <button type="button" class="btn" id="sh-band" style="margin-top:14px">★ Make the band app open on this gig</button>
       <div class="row-btns spread">
         <button type="button" class="btn danger" id="sh-delete">Delete gig</button>
         <span class="row-btns">
           <button type="button" class="btn" id="sh-copy">New gig (copy of this)</button>
+          <button type="button" class="btn" id="sh-rehearse">New rehearsal</button>
           <button type="submit" class="btn primary">Save</button>
         </span>
       </div>
@@ -466,7 +473,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v56';
+window.APP_VERSION = 'v57';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
