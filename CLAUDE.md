@@ -113,13 +113,13 @@ gigs too; the band app opens on the one David marks with **★ Make the band app
 At the moment: Ionis Event (Nov 4 2026), Living Your Dreams (Nov 7 2026, ★, the one being prepared) and The Midway;
 the two November gigs started as copies of the Midway info (David: "same info for now").
 
-- **Rehearsals** (David, 2026-11-16: "a rehearsal mode… that lets us choose any song"): a gig can be a rehearsal
-  (`show.rehearsal`, checkbox in the Gigs dialog, saved as soon as it's ticked; a gig with "rehearsal" in its name counts
-  until it's set either way, `isRehearsal()`). Gigs dialog **New rehearsal** = copy of this gig named "Rehearsal for …",
-  no date, ticked. At a rehearsal: the band app shows **All songs** under the setlist (tap → song pop-up / chart; normally
-  editor-only, now class `lib-bit`); Perform's picker lists "This set" then "Other songs" A–Z (`gigSongs()`, `pf.nSet`;
-  turning pages stays within the set or within the other songs, "Not in the set" in the count); the metronome lists
-  "Other songs" under the set's tempos and ‹ › steps through them. "New gig (copy of this)" makes a non-rehearsal.
+- **Rehearsals** (David, 2026-11-16: "I don't even want to see a setlist for rehearsal… everyone choose from the list of
+  all songs"): a gig can be a rehearsal (`show.rehearsal`, checkbox in the Gigs dialog, saved as soon as it's ticked; a gig
+  with "rehearsal" in its name counts until it's set either way, `isRehearsal()`). A rehearsal has NO setlist: the Setlist
+  tab becomes "Songs" (heading "Rehearsal"), the set, break/note buttons and Print buttons are hidden, and All songs shows
+  (in the band app too, class `lib-bit`; no "+ Set" buttons). Perform and the metronome list every song A–Z, unnumbered
+  (`gigSongs()`); Perform opens on the song last picked. Gigs dialog **New rehearsal** = copy of this gig (band, stage
+  plot, mixer) named "Rehearsal", no date, empty setlist. "New gig (copy of this)" makes a non-rehearsal.
 - **One codebase, two apps.** `<html data-mode="editor">` here; the band app is the same files with
   `data-mode="band"` (no editing, no key settings). Anything marked `editor-only`
   (CSS class) or gated on `EDITOR` in app.js is hidden in the band app; `edit-only` = editing controls.
