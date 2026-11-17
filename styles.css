@@ -574,7 +574,9 @@ body.viewing { overflow: hidden; }
   body:not(.print-list) #print-setlist { display: none; }
   body:not(.print-pdf) #print-pdf { display: none; }
   body.print-pdf > :not(#print-pdf) { display: none !important; }
-  #print-pdf img { display: block; max-width: 100%; max-height: 9.8in; margin: 0 auto; break-after: page; }
+  /* Each picture's width is set in app.js from its shape so it is never taller than the page (see PRINT_PAGE_SHAPE).
+     No max-height in inches: Safari lays the page out at one width and then scales it to the paper, so inches don't hold. */
+  #print-pdf img { display: block; max-width: 100%; height: auto; margin: 0 auto; break-inside: avoid; break-after: page; }
   #print-pdf img:last-child { break-after: auto; }
   #print-setlist h1 { font-size: 30pt; text-transform: uppercase; }
   #print-setlist p { margin: 2px 0 14px; color: #444; }

@@ -194,4 +194,9 @@ the two November gigs started as copies of the Midway info (David: "same info fo
 - **Printing** (2026-10-25, David: pages came out zoomed in): the stage plot prints at most 8.4in wide so it fits one page
   either way round (Safari ignores `@page plot { size: landscape }`); the chart viewer's Print draws each PDF page to a
   picture (`#print-pdf`, body class `print-pdf`) sized to fit the paper, instead of printing the PDF from a hidden iframe.
+  **Blank pages / odd scaling** (David, 2026-11-16: What's Up, 3 A4 pages, printed as 6 from the Mac Safari app): Safari lays
+  the printout out at a width from its own page setup, then scales it to the `@page` area, so a `max-height` in inches
+  doesn't hold and a page cut in two left a near-blank page after it. Each picture's width is now set from its shape
+  (`PRINT_PAGE_SHAPE` = 1.29, page height ÷ width) with `break-inside: avoid`; don't go back to inch heights. Tested
+  through WebKit printing at several margins/paper sizes: What's Up 3 → 3, the whole LYD set 31 → 31.
 - Icons: `tools/make-icons.py` (dark = editor); `tools/make-icons.py band <folder>` (light = band app).

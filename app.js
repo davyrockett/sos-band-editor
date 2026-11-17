@@ -1722,6 +1722,10 @@ $('viewer-save').addEventListener('click', async () => {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 });
 // Print: each page is drawn as a picture sized to fit the paper, then the browser prints those.
+// Pictures are sized by shape, not inches: Safari lays the printout out at a width set by its own page setup and then
+// scales it to the @page area, so only the page's height ÷ width can be trusted. Letter minus 12 mm margins is
+// 10.04 ÷ 7.55 = 1.33 (A4 is taller still); 1.29 leaves a little room.
+const PRINT_PAGE_SHAPE = 1.29;
 // (Printing the PDF from a hidden frame came out zoomed in and cut off, at least in Safari.)
 $('viewer-print').addEventListener('click', async () => {
   const doc = viewer.doc, btn = $('viewer-print');
@@ -1742,6 +1746,9 @@ $('viewer-print').addEventListener('click', async () => {
       const img = el('img');
       img.src = URL.createObjectURL(blob);
       img.alt = `Page ${i}`;
+      // As wide as fits without being taller than the page: a page cut in two printed a near-blank page after it
+      // (David, 2026-11-16: What's Up, 3 pages in A4, printed as 6 from the Mac app).
+      img.style.width = Math.min(100, 100 * PRINT_PAGE_SHAPE / (vp.height / vp.width)).toFixed(2) + '%';
       box.append(img);
     }
     await Promise.all([...box.querySelectorAll('img')].map(img => img.decode().catch(() => {})));
