@@ -28,6 +28,18 @@
     for (; e; e = e.parentElement) if (e.id === FLOAT[0] || e.id === FLOAT[1]) return true;
     return false;
   }
+  // True when e scrolls with the page or with a scrolling box. Such things only pass by the bottom edge, they're
+  // not bars, so the buttons mustn't move for them (on the website the buttons jumped about while scrolling,
+  // 2026-11-21). A real bar is fixed or sticky, or sits in a page that doesn't scroll.
+  function scrollsPast(e) {
+    for (; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+      var cs = getComputedStyle(e);
+      if (cs.position === 'fixed' || cs.position === 'sticky') return false;
+      if (/auto|scroll/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 1) return true;
+    }
+    var root = document.scrollingElement || document.documentElement;
+    return root.scrollHeight > window.innerHeight + 2;
+  }
   function barTop() {
     var h = window.innerHeight, w = window.innerWidth, top = h, xs = [24, 110, 200, 290];
     if (!document.elementsFromPoint) return 0;
@@ -38,7 +50,7 @@
         for (var e = stack[j]; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
           var r = e.getBoundingClientRect();
           if (r.width >= w * 0.6 && r.height < h * 0.5 && r.bottom <= h + 2 && r.bottom >= h - 40) {
-            if (r.top < top) top = r.top;
+            if (r.top < top && !scrollsPast(e)) top = r.top;
             break;
           }
         }
