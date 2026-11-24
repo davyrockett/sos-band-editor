@@ -238,7 +238,7 @@ applyTheme(savedTheme());
       <label id="sv-gig-ver-wrap" class="edit-only" hidden>Chart at <span id="sv-gig-name2"></span>
         <select id="sv-gig-ver"></select></label>
       <p class="sv-notes" id="sv-notes"></p>
-      <div class="row-btns">
+      <div class="row-btns sv-btns">
         <button type="button" class="btn edit-only" id="sv-edit">Edit song</button>
       </div>
       <p class="cap" id="sv-vers-cap" hidden></p>
@@ -478,7 +478,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v61';
+window.APP_VERSION = 'v62';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
