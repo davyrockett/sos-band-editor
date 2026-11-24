@@ -3,7 +3,7 @@
    Everything lives in one list of records ("items"), each stamped with when it last changed:
      band    – band name, organisation, which show is open
      member  – name, instrument, colour (kind), the gear they need on stage
-     song    – title, artist, lead singer (a member id), key, notes, chart (PDF path)
+     song    – title, artist, lead singer (a member id), key, notes, chart (PDF path), versions (other keys/singers)
      show    – name, date, venue, who's on stage and where, setlist order, gear extras, mixers
    The list is stored in the public repo davyrockett/sos-band-data (data.json) and charts in its
    charts/ folder, which GitHub Pages serves. Anyone can view; editing needs the access key. */
@@ -127,6 +127,30 @@ function fmtDate(iso, long = true) {
 }
 // A song's lead singer at a gig: the gig's own pick (show.leads) or else the song's default (song.lead).
 const leadFor = (song, show) => show?.leads?.[song.id] || song.lead;
+// A song can have more than one chart (David, 2026-11-23: one song in different keys for different singers): its own
+// chart + key (the default) plus song.versions = [{ id, name, key, singer, chart, chartVersion }]. At a gig the chart is
+// the gig's own pick (show.versions[songId]: a version id, or 'std' = the default chart), else the version made for the
+// gig's lead singer, else the default chart.
+const songVersions = song => (song?.versions || []).filter(v => v && v.id);
+function versionFor(song, show) {
+  const vs = songVersions(song);
+  if (!vs.length) return null;
+  const pick = show?.versions?.[song.id];
+  if (pick === 'std') return null;
+  const picked = pick && vs.find(v => v.id === pick);
+  if (picked) return picked;
+  const lead = leadFor(song, show);
+  return (lead && vs.find(v => v.singer === lead)) || null;
+}
+// The chart record to use ({ chart, chartVersion, key }): the song itself or one of its versions.
+const chartFor = (song, show) => versionFor(song, show) || song;
+const keyFor = (song, show) => chartFor(song, show).key || '';
+// "Sarah · key of Bb" for a version; the default chart is named after the song's default singer.
+function versionLabel(song, v) {
+  const who = v ? (v.name || get(v.singer)?.name || 'Other version') : `Default${get(song.lead) ? ` (${get(song.lead).name})` : ''}`;
+  const key = (v || song).key;
+  return key ? `${who} · ${key}` : who;
+}
 // A gig's length is kept in minutes (show.length); shown as "1 hr 30 min".
 function fmtLength(min) {
   if (!min) return '';
@@ -287,7 +311,7 @@ function renderSet(s) {
       chip.classList.add('out');
       chip.title = `${get(lead).name} isn't playing at ${s.name}`;
     } else if (lead !== song.lead) chip.title += ` at this gig (default: ${get(song.lead)?.name || 'not set'})`;
-    btn.append(txt, chip, el('span', 'keytag', song.key || ''));
+    btn.append(txt, chip, el('span', 'keytag', keyFor(song, s)));
     btn.addEventListener('click', () => openSong(id));
     li.append(btn);
     if (canEdit()) {
@@ -1471,11 +1495,34 @@ function openSong(id) {
     sel.value = show.leads?.[id] || '';
     $('sv-gig-name').textContent = show.name;
   }
-  $('sv-key').textContent = s.key || '—';
+  // Charts: one button, or one per version when the song has several; the one this gig uses comes first.
+  const vers = songVersions(s), use = inGig ? chartFor(s, show) : s;
+  $('sv-key').textContent = use.key || '—';
   $('sv-bpm').textContent = s.bpm ? `${s.bpm} BPM` : '—';
   $('sv-notes').textContent = s.notes || '';
-  $('sv-chart').disabled = !s.chart;
-  $('sv-nochart').hidden = Boolean(s.chart);
+  document.querySelectorAll('#song-view .sv-chart-btn').forEach(b => b.remove());
+  const all = [s, ...vers].filter(c => c.chart);
+  all.sort((a, b) => (b === use) - (a === use));
+  for (const c of all) {
+    const b = el('button', 'btn sv-chart-btn' + (c === all[0] ? ' primary' : ''), !vers.length ? 'Open chart' : versionLabel(s, c === s ? null : c));
+    b.type = 'button';
+    if (vers.length && inGig && c === use) b.title = `The chart for ${show.name}`;
+    b.addEventListener('click', () => openChart(s, c));
+    $('sv-edit').before(b);
+  }
+  $('sv-nochart').hidden = all.length > 0;
+  $('sv-vers-cap').hidden = !vers.length;
+  if (vers.length) $('sv-vers-cap').textContent = inGig
+    ? `${vers.length + 1} versions of this song. ${show.name} uses: ${versionLabel(s, versionFor(s, show))}.`
+    : `${vers.length + 1} versions of this song (another key or singer).`;
+  $('sv-gig-ver-wrap').hidden = !(inGig && canEdit() && vers.length);
+  if (inGig && canEdit() && vers.length) {
+    const sel = $('sv-gig-ver'), auto = versionFor(s, { ...show, versions: {} });
+    sel.replaceChildren(new Option(`Follow the lead singer (${versionLabel(s, auto)})`, ''),
+      new Option(versionLabel(s, null), 'std'), ...vers.map(v => new Option(versionLabel(s, v), v.id)));
+    sel.value = show.versions?.[id] && (show.versions[id] === 'std' || vers.some(v => v.id === show.versions[id])) ? show.versions[id] : '';
+    $('sv-gig-name2').textContent = show.name;
+  }
   $('song-view').hidden = false;
   $('song-edit').hidden = true;
   $('song-dlg').showModal();
@@ -1496,6 +1543,8 @@ function editSong(id) {
   sel.value = s.lead || '';
   $('se-chart-name').textContent = s.chart ? `Current: ${s.chart.split('/').pop()}` : 'No chart yet.';
   $('se-chart').value = '';
+  editVers = songVersions(s).map(v => ({ ...v }));
+  drawVersions();
   $('se-error').hidden = true;
   $('se-delete').hidden = !id;
   $('se-delete').classList.remove('armed');
@@ -1505,6 +1554,76 @@ function editSong(id) {
   if (!$('song-dlg').open) $('song-dlg').showModal();
 }
 $('sv-edit').addEventListener('click', () => editSong(songId));
+// Edit song: the other versions (name, key, singer, PDF). New PDFs upload when the song is saved.
+let editVers = [];
+function readVersions() {
+  for (const row of document.querySelectorAll('#se-versions .ver-row')) {
+    const v = editVers.find(x => x.id === row.dataset.id);
+    if (!v) continue;
+    v.name = row.querySelector('.ver-name').value.trim();
+    v.key = row.querySelector('.ver-key').value.trim();
+    v.singer = row.querySelector('.ver-singer').value;
+  }
+}
+function drawVersions() {
+  const box = $('se-versions');
+  box.replaceChildren();
+  for (const v of editVers) {
+    const row = el('div', 'ver-row');
+    row.dataset.id = v.id;
+    const name = el('input', 'ver-name');
+    name.value = v.name || '';
+    name.placeholder = 'e.g. Sarah’s key';
+    const key = el('input', 'ver-key');
+    key.value = v.key || '';
+    key.placeholder = 'e.g. Bb';
+    const singer = el('select', 'ver-singer');
+    singer.append(new Option('No one in particular', ''), ...members().map(m => new Option(m.name, m.id)));
+    singer.value = v.singer || '';
+    const l1 = el('label', null, 'Name'), l2 = el('label', null, 'Key'), l3 = el('label', null, 'Use when this person sings lead');
+    l1.append(name); l2.append(key); l3.append(singer);
+    const two = el('div', 'two');
+    two.append(l1, l2);
+    const file = el('input');
+    file.type = 'file';
+    file.accept = 'application/pdf,.pdf';
+    const pick = el('label', 'btn file-btn', 'Choose PDF… ');
+    pick.append(file);
+    const cap = el('p', 'cap', v.file ? `New: ${v.file.name} (uploads when you save)` : v.chart ? `Current: ${v.chart.split('/').pop()}` : 'No chart yet.');
+    file.addEventListener('change', () => {
+      v.file = file.files[0] || null;
+      cap.textContent = v.file ? `New: ${v.file.name} (uploads when you save)` : v.chart ? `Current: ${v.chart.split('/').pop()}` : 'No chart yet.';
+    });
+    const rm = el('button', 'btn danger ver-rm', 'Remove this version');
+    rm.type = 'button';
+    rm.addEventListener('click', () => {
+      if (!rm.classList.contains('armed')) { rm.classList.add('armed'); rm.textContent = 'Tap again to remove'; return; }
+      readVersions();
+      editVers = editVers.filter(x => x !== v);
+      drawVersions();
+    });
+    const btns = el('div', 'row-btns spread');
+    btns.append(pick, rm);
+    row.append(two, l3, cap, btns);
+    box.append(row);
+  }
+}
+$('se-ver-add').addEventListener('click', () => {
+  readVersions();
+  editVers.push({ id: uid('v'), name: '', key: '', singer: '', chart: '' });
+  drawVersions();
+  document.querySelector('#se-versions .ver-row:last-child .ver-name')?.focus();
+});
+$('sv-gig-ver').addEventListener('change', e => {
+  const v = e.target.value, song = get(songId);
+  patchShow(x => {
+    x.versions = { ...(x.versions || {}) };
+    if (!v) delete x.versions[songId];
+    else x.versions[songId] = v;
+  });
+  openSong(songId);
+  toast(`“${song.title}” at ${currentShow().name}: ${versionLabel(song, versionFor(song, currentShow()))}.`);
+});
 $('sv-gig-lead').addEventListener('change', e => {
   const v = e.target.value, song = get(songId);
   patchShow(x => {
@@ -1529,7 +1648,6 @@ $('break-add').addEventListener('click', () => {
   toast('Added a break at the end of the set. Drag it to where it goes.');
 });
 $('se-cancel').addEventListener('click', () => (songId ? openSong(songId) : $('song-dlg').close()));
-$('sv-chart').addEventListener('click', () => openChart(get(songId)));
 $('se-chart').addEventListener('change', e => {
   pendingChart = e.target.files[0] || null;
   if (pendingChart) $('se-chart-name').textContent = `New: ${pendingChart.name} (uploads when you save)`;
@@ -1541,13 +1659,22 @@ $('song-form').addEventListener('submit', async e => {
   const id = songId || 's-' + slug(title) + (get('s-' + slug(title)) ? '-' + Date.now().toString(36) : '');
   const old = get(id) || {};
   const rec = { ...old, type: 'song', title, artist: $('se-artist').value.trim(), lead: $('se-lead').value, key: $('se-key').value.trim(), bpm: cleanBpm($('se-bpm').value), notes: $('se-notes').value.trim(), chart: old.chart || '' };
+  readVersions();
+  const vers = editVers.filter(v => v.name || v.key || v.singer || v.chart || v.file);
+  const uploads = vers.filter(v => v.file);
   const btn = $('se-save');
-  if (pendingChart) {
+  if (pendingChart || uploads.length) {
     btn.disabled = true;
     btn.textContent = 'Uploading chart…';
     try {
-      rec.chart = await uploadChart(pendingChart, slug(title));
-      rec.chartVersion = Date.now();
+      if (pendingChart) {
+        rec.chart = await uploadChart(pendingChart, slug(title));
+        rec.chartVersion = Date.now();
+      }
+      for (const v of uploads) {
+        v.chart = await uploadChart(v.file, `${slug(title)}-${v.id}`);
+        v.chartVersion = Date.now();
+      }
     } catch (ex) {
       $('se-error').textContent = ex.message || 'The chart didn’t upload.';
       $('se-error').hidden = false;
@@ -1557,9 +1684,13 @@ $('song-form').addEventListener('submit', async e => {
       btn.textContent = 'Save';
     }
   }
+  rec.versions = vers.map(({ file, ...v }) => v);
+  if (!rec.versions.length) delete rec.versions;
+  editVers = vers;
+  uploads.forEach(v => { v.file = null; });
   put(id, rec);
   openSong(id);
-  if (pendingChart) toast('Saved. A new chart can take a minute or two to show up for everyone.');
+  if (pendingChart || uploads.length) toast('Saved. A new chart can take a minute or two to show up for everyone.');
 });
 $('se-delete').addEventListener('click', () => {
   const b = $('se-delete');
@@ -1575,17 +1706,18 @@ $('se-delete').addEventListener('click', () => {
 const chartUrl = s => CHART_BASE + encodeURI(s.chart) + (s.chartVersion ? `?v=${s.chartVersion}` : '');
 // Charts open inside the app in a full-screen viewer (pdf.js draws the pages), with Close, Download and Print.
 // Opening the PDF on its own left people stuck in the installed app with no way back.
-function openChart(s) {
-  if (!s?.chart) return;
-  const got = fetch(chartUrl(s)).then(res => {
+function openChart(s, c = s) {
+  if (!c?.chart) return;
+  const got = fetch(chartUrl(c)).then(res => {
     if (!res.ok) throw new Error('missing');
     return res.blob();
   });
-  showPdf(got, s.title, `${s.title}.pdf`, 'That chart isn’t saved on this device yet. Open it once while online.');
+  const name = c === s ? s.title : `${s.title} (${versionLabel(s, c)})`;
+  showPdf(got, name, `${name}.pdf`, 'That chart isn’t saved on this device yet. Open it once while online.');
 }
 $('print-set-charts').addEventListener('click', () => {
   const s = currentShow();
-  const list = (s?.setlist || []).map(get).filter(x => x && x.chart);
+  const list = (s?.setlist || []).map(get).filter(x => x && chartFor(x, s).chart);
   if (!list.length) return;
   const made = (async () => {
     await loadScript('vendor/pdf-lib.min.js', 'PDFLib');
@@ -1593,7 +1725,7 @@ $('print-set-charts').addEventListener('click', () => {
     const missing = [];
     for (const song of list) {
       try {
-        const res = await fetch(chartUrl(song));
+        const res = await fetch(chartUrl(chartFor(song, s)));
         if (!res.ok) throw new Error();
         const src = await PDFLib.PDFDocument.load(await res.arrayBuffer(), { ignoreEncryption: true });
         const pages = await out.copyPages(src, src.getPageIndices());
@@ -1772,12 +1904,16 @@ window.addEventListener('afterprint', () => {
 async function keepChartsOffline() {
   if (!navigator.onLine || !('caches' in window)) return;
   const list = [...metSongs(currentShow()), ...songs()];
+  const show = currentShow();
   for (const song of new Set(list)) {
-    if (!song?.chart) continue;
-    try {
-      const cache = await caches.open('sos-charts');
-      if (!(await cache.match(chartUrl(song)))) await cache.add(chartUrl(song));
-    } catch {}
+    // This gig's version first, then the song's other charts.
+    for (const c of new Set([chartFor(song, show), song, ...songVersions(song)])) {
+      if (!c?.chart) continue;
+      try {
+        const cache = await caches.open('sos-charts');
+        if (!(await cache.match(chartUrl(c)))) await cache.add(chartUrl(c));
+      } catch {}
+    }
   }
 }
 
@@ -1801,7 +1937,7 @@ $('print-set-list').addEventListener('click', () => {
     const song = get(id);
     if (!song) continue;
     const li = el('li', null, song.title);
-    const extra = [get(leadFor(song, s))?.name, song.key && `key ${song.key}`].filter(Boolean).join(' · ');
+    const extra = [get(leadFor(song, s))?.name, keyFor(song, s) && `key ${keyFor(song, s)}`].filter(Boolean).join(' · ');
     if (extra) li.append(el('small', null, extra));
     ol.append(li);
   }
@@ -2457,15 +2593,17 @@ metMarks();
 const PF_GAP = 12;
 const pfTwo = () => { const b = $('pf-stage'); return b.clientWidth > b.clientHeight && b.clientHeight >= 500; };
 function pfDoc(song) {
-  if (!song?.chart) return Promise.resolve(null);
-  if (!pf.docs.has(song.id)) pf.docs.set(song.id, (async () => {
+  const c = song && chartFor(song, currentShow());
+  if (!c?.chart) return Promise.resolve(null);
+  const k = chartUrl(c);   // this gig's version of the song
+  if (!pf.docs.has(k)) pf.docs.set(k, (async () => {
     await loadScript('vendor/pdf.min.js', 'pdfjsLib');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
-    const res = await fetch(chartUrl(song));
+    const res = await fetch(k);
     if (!res.ok) throw new Error('missing');
     return pdfjsLib.getDocument({ data: new Uint8Array(await res.arrayBuffer()) }).promise;
-  })().catch(() => { pf.docs.delete(song.id); return 'failed'; }));
-  return pf.docs.get(song.id);
+  })().catch(() => { pf.docs.delete(k); return 'failed'; }));
+  return pf.docs.get(k);
 }
 // Let go of drawn pages (all, or the oldest beyond the last 5). iPad Safari has little room for drawn pages and
 // slows right down when it runs out, so a forgotten page is emptied straight away instead of waiting to be cleaned up.
@@ -2506,7 +2644,7 @@ async function pfShow() {
   if (!doc || doc === 'failed') {
     pf.page = 1;
     page.replaceChildren();
-    msg.replaceChildren(el('b', null, song.title), el('span', null, [song.key && `Key ${song.key}`, song.bpm && `${song.bpm} BPM`].filter(Boolean).join(' · ')),
+    msg.replaceChildren(el('b', null, song.title), el('span', null, [keyFor(song, currentShow()) && `Key ${keyFor(song, currentShow())}`, song.bpm && `${song.bpm} BPM`].filter(Boolean).join(' · ')),
       el('span', 'pf-dim', doc ? 'Couldn’t load this chart. Check the connection.' : 'No chart for this song.'));
     msg.hidden = false;
     $('pf-count').textContent = pfWhere();

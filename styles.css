@@ -489,6 +489,9 @@ dialog.sheet::backdrop { background: rgba(20,18,16,.5); }
 .lbl { display: block; font-weight: 700; font-size: 15px; margin: 14px 0 4px; }
 .file-btn { position: relative; margin-top: 6px !important; }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.ver-row { border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px 12px; margin: 0 0 10px; }
+.ver-row .row-btns.spread { margin-top: 4px; align-items: center; }
+.ver-row .file-btn { margin-top: 0 !important; }
 .sv-artist { color: var(--muted); margin: 0 0 12px; }
 .facts { display: flex; gap: 28px; margin: 0 0 12px; }
 .facts dt { font-size: 13px; color: var(--muted); }

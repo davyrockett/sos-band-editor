@@ -177,6 +177,14 @@ the two November gigs started as copies of the Midway info (David: "same info fo
 - Setlist items: song ids, `break-…` (break; new column on wide screens) and `note-…` (custom text, kept in the show's `setNotes`). Song numbers count through breaks and notes.
 - **Gig length** (David, 2026-10-26): `show.length` in minutes, typed in the Gigs dialog ("Length (minutes)"); `fmtLength()` shows it as "1 hr 30 min" in the header, gig list, setlist line, stage plot heading and printed setlist.
 - **Lead singers per gig** (David, 2026-10-26): `song.lead` is the song's DEFAULT singer (Edit song: "Default lead singer"). A gig can pick someone else for a song without changing other gigs: `show.leads` = { songId: memberId }, set in the song pop-up opened from that gig's setlist ("Lead singer at <gig>", editor only; choosing Default removes the entry). `leadFor(song, show)` gives the singer to show; the setlist, song pop-up and printed setlist use it, the song library shows the default.
+- **Song versions** (David, 2026-11-23: "multiple PDFs to one song… one song in multiple keys depending on singer"):
+  a song's own chart + key is its Default (named after its default singer); `song.versions` = [{ id, name, key, singer,
+  chart, chartVersion }] are the others, edited under "Other versions" in Edit song (PDFs upload on Save as
+  `charts/<slug>-<version id>.pdf`). At a gig, `chartFor(song, show)`: the gig's pick (`show.versions[songId]`, a version
+  id or 'std' = default; "Chart at <gig>" in the song pop-up, editor only, shown when the song has versions), else the
+  version whose `singer` is the gig's lead (`leadFor`), else the default. The setlist key, printed setlist, Print all
+  charts and Perform all use the gig's version; the song pop-up has a button per version (this gig's first); all
+  versions are kept offline. sync-charts.py only touches the default chart.
 - In the Setlist, a song's lead-singer chip is greyed out (`.chip.out`) when that singer isn't in the gig's lineup, so David sees he must change the singer or drop the song (David, 2026-10-26).
 - Lead singers were only filled in where obvious (Joel's originals, Cam's Funk Surprise); David fills in the rest.
 - Charts open in an in-app full-screen viewer (Close / Download / Print; on phones one Save / Print button = share sheet),

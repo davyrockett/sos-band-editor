@@ -235,11 +235,13 @@ applyTheme(savedTheme());
       </dl>
       <label id="sv-gig-lead-wrap" class="edit-only" hidden>Lead singer at <span id="sv-gig-name"></span>
         <select id="sv-gig-lead"></select></label>
+      <label id="sv-gig-ver-wrap" class="edit-only" hidden>Chart at <span id="sv-gig-name2"></span>
+        <select id="sv-gig-ver"></select></label>
       <p class="sv-notes" id="sv-notes"></p>
       <div class="row-btns">
-        <button type="button" class="btn primary" id="sv-chart">Open chart</button>
         <button type="button" class="btn edit-only" id="sv-edit">Edit song</button>
       </div>
+      <p class="cap" id="sv-vers-cap" hidden></p>
       <p class="cap" id="sv-nochart" hidden>No chart for this song yet.</p>
       <p class="cap">The chart opens here, with buttons to download or print it.</p>
     </div>
@@ -260,6 +262,13 @@ applyTheme(savedTheme());
         <span class="lbl">Chart (PDF)</span>
         <p class="cap" id="se-chart-name"></p>
         <label class="btn file-btn">Choose PDF… <input type="file" id="se-chart" accept="application/pdf,.pdf"></label>
+      </div>
+      <div class="vers-field">
+        <span class="lbl">Other versions</span>
+        <p class="cap">The same song in another key or for another singer, each with its own PDF. At a gig, the version
+          for that gig’s lead singer is used (or pick one in the song’s pop-up from the setlist).</p>
+        <div id="se-versions"></div>
+        <button type="button" class="btn" id="se-ver-add">+ Add a version</button>
       </div>
       <p class="f-error" id="se-error" role="alert" hidden></p>
       <div class="row-btns spread">
@@ -469,7 +478,7 @@ applyTheme(savedTheme());
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v60';
+window.APP_VERSION = 'v61';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
