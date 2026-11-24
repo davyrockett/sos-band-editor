@@ -110,6 +110,8 @@ Tabs: Setlist (tap a song for its chart; "Print all charts" joins the set's PDFs
   to the Gear tab's PA section (David's list). The band app shows "Monitor: 1/2 stage monitor(s)" under Out.
 Gigs ("shows" in the code/data): the picker in the header lists them, upcoming first. Band members can switch
 gigs too; the band app opens on the one David marks with **★ Make the band app open on this gig** (`band.currentShow`).
+A gig picked on a device (`pickShow()`, saved with where the ★ was) only sticks until David moves the ★; then every
+device opens on the new ★ gig (David, 2026-11-23: the band app kept opening on an old gig instead of the rehearsal).
 At the moment: Ionis Event (Nov 4 2026), Living Your Dreams (Nov 7 2026, ★, the one being prepared) and The Midway;
 the two November gigs started as copies of the Midway info (David: "same info for now").
 

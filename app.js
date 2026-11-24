@@ -18,7 +18,7 @@ const CHART_BASE = `${location.origin}/sos-band-data/`;
 const EDITOR = document.documentElement.dataset.mode !== 'band';
 // Both apps live on the same site and share browser storage, so their keys must differ.
 const P = EDITOR ? 'sosed.' : 'sos.';
-const K = { data: P + 'data', token: P + 'sync-token', last: P + 'sync-last', tab: P + 'tab', show: P + 'show', theme: P + 'theme', met: P + 'met' };
+const K = { data: P + 'data', token: P + 'sync-token', last: P + 'sync-last', tab: P + 'tab', show: P + 'show', showStar: P + 'show-star', theme: P + 'theme', met: P + 'met' };
 // The editor's link to the band app shows its address on whichever site this is.
 { const bl = document.getElementById('band-link'); if (bl) bl.textContent = bl.href.replace(/^https?:\/\//, '').replace(/\/$/, ''); }
 
@@ -67,9 +67,17 @@ function shows() {
   return [...next, ...past];
 }
 function currentShow() {
-  // Opens on the gig David marked as main (★) until someone picks another one on their device.
-  const id = lsGet(K.show) || band().currentShow;
-  return get(id) || shows()[0] || null;
+  // Opens on the gig David marked as main (★). A gig picked on a device only sticks while the ★ stays put:
+  // when David moves the ★ (e.g. to a rehearsal), every device follows it (David, 2026-11-23: the band app
+  // kept opening on an old gig because a phone had picked it once).
+  const star = band().currentShow;
+  const mine = lsGet(K.showStar) === (star || '') ? lsGet(K.show) : null;
+  return get(mine) || get(star) || shows()[0] || null;
+}
+// Remember a gig picked on this device, along with where the ★ was at the time.
+function pickShow(id) {
+  lsSet(K.show, id);
+  lsSet(K.showStar, id === null ? null : band().currentShow || '');
 }
 
 function saveLocal() { lsSet(K.data, JSON.stringify({ items })); }
@@ -2186,7 +2194,7 @@ function openShows() {
     b.type = 'button';
     b.setAttribute('aria-current', s.id === cur?.id);
     b.append(el('span', null, s.name + (EDITOR && s.id === band().currentShow ? ' ★' : '')), el('span', 'd', [fmtDate(s.date, false), fmtLength(s.length), isRehearsal(s) && !/rehears/i.test(s.name) && 'rehearsal'].filter(Boolean).join(' · ')));
-    b.addEventListener('click', () => { lsSet(K.show, s.id); render(); openShows(); keepChartsOffline(); });
+    b.addEventListener('click', () => { pickShow(s.id); render(); openShows(); keepChartsOffline(); });
     li.append(b);
     ul.append(li);
   }
@@ -2235,7 +2243,7 @@ $('sh-rehearse').addEventListener('click', () => {
   const id = uid('show');
   const { id: _x, updatedAt, ...copy } = structuredClone(cur);
   put(id, { ...copy, name: 'Rehearsal', date: '', length: 0, rehearsal: true, setlist: [], setNotes: {}, leads: {} });
-  lsSet(K.show, id);
+  pickShow(id);
   render();
   openShows();
   $('sh-date').focus();
@@ -2247,7 +2255,7 @@ $('sh-copy').addEventListener('click', () => {
   const id = uid('show');
   const { id: _x, updatedAt, ...copy } = structuredClone(cur);
   put(id, { ...copy, name: 'New show', date: '', rehearsal: false });
-  lsSet(K.show, id);
+  pickShow(id);
   render();
   openShows();
   $('sh-name').focus();
@@ -2258,7 +2266,7 @@ $('sh-delete').addEventListener('click', () => {
   const b = $('sh-delete'), cur = currentShow();
   if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Tap again to delete'; return; }
   remove(cur.id);
-  lsSet(K.show, null);
+  pickShow(null);
   const next = shows()[0];
   if (next && band().currentShow === cur.id) put('band', { ...band(), currentShow: next.id });
   openShows();
